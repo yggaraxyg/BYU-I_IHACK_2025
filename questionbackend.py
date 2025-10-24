@@ -1,4 +1,4 @@
-import from csv-parser 
+from csv-parser import parse_csv as pcsv
 
 class questionbox:
 
@@ -31,6 +31,13 @@ class questionbox:
         questionset.append(tru)
         return questionset
 
+    #add questions from a CSV
+    def getFromCSV(name):
+        box = pcsv(name)
+        while(len(box)>0):
+            self.questionlist.append(box.pop(0))
+
+    #remove a question with the question que
     def removeQuestionByQue(que):
         salt = []
         for i in range(len(self.questionlist)):
@@ -43,12 +50,15 @@ class questionbox:
         else:
             return    
 
+    #remove a question by index
     def removeQuestionByIndex(I):
         self.questionlist.pop(I)
 
+    #erase all questions
     def wipequestions():
         self.questionlist=[]
 
-    
+
+#checks if a question is correct    
 def checkquestion(questionset, ans):
     return (questionset[5]==ans)
