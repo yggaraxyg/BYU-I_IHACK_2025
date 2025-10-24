@@ -48,3 +48,5 @@ class questionbox:
         self.questionlist=[]
 
     
+def checkquestion(questionset, ans):
+    return (questionset[5]==ans)
