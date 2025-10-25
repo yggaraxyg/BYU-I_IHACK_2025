@@ -89,7 +89,7 @@ class World:
         self.on_cleanup()
 
     def player_update(self):
-        self.player.pos = self.player.pos + self.player.velocity
+
         self.player_relative = self.player.pos - self.camera_pos
         self.player_sprite.update(self.player_relative)
         self.collision_check()
@@ -102,6 +102,7 @@ class World:
 
         
     def camera(self):
+        self.cameralock = pygame.Vector2(1,1)
         self.camera_pos = self.player.pos - 0.5 * pygame.Vector2(self.width, self.height)
         if self.camera_pos.x <= 0:
             self.camera_pos.x = 0
@@ -132,21 +133,21 @@ class World:
             self.player.pos -= self.player.facing * 2
         sprite_collision = pygame.sprite.spritecollide(self.player, self.collectable_sprites, False)
         self.player.pos.x += self.player.velocity.x
-        for tile_rect in self.collision_tiles:
-            if self.player.rect.colliderect(tile_rect):
-                if self.player_velocity.x > 0:
-                    self.player.rect.right = tile_rect.left
-                if self.player_velocity.x < 0:
-                    self.player.rect.left = tile_rect.right
-                self.player.velocity.x = 0
+#        for tile_rect in self.collision_tiles:
+#            if self.player.rect.colliderect(tile_rect):
+#                if self.player_velocity.x > 0:
+#                    self.player.rect.right = tile_rect.left
+#                if self.player_velocity.x < 0:
+#                    self.player.rect.left = tile_rect.right
+#                self.player.velocity.x = 0
         self.player.pos.y += self.player.velocity.y
-        for tile_rect in self.collision_tiles:
-            if self.player.rect.colliderect(tile_rect):
-                if self.player_velocity.y > 0:
-                    self.player.rect.bottom = tile_rect.top
-                if self.player_velocity.y < 0:
-                    self.player.rect.top = tile_rect.bottom
-                self.player.velocity.y = 0
+#        for tile_rect in self.collision_tiles:
+#            if self.player.rect.colliderect(tile_rect):
+#                if self.player_velocity.y > 0:
+#                    self.player.rect.bottom = tile_rect.top
+#                if self.player_velocity.y < 0:
+#                    self.player.rect.top = tile_rect.bottom
+#                self.player.velocity.y = 0
         
     
     def kill(self):
