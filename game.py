@@ -2,9 +2,9 @@ import pygame
 from pygame.locals import *
 import os
 import random
-'''import pygame_menu
+import pygame_menu
 import pytmx
-from pytmx.util_pygame import load_pygame'''
+from pytmx.util_pygame import load_pygame
 
 class World:
     def __init__(self):
@@ -21,9 +21,7 @@ class World:
         self.setup()
 
     def setup(self):
-        self.camera_pos = pygame.Vector2(0,0)
-        self.ogre_image = pygame.image.load(os.path.join('data', 'sprites', 'ogre.png'))
-        self.eyeball_image = pygame.image.load(os.path.join('data', 'sprites', 'florb.png'))        
+        self.camera_pos = pygame.Vector2(-0.5 * self.width,-0.5 * self.height)
         self.player_sprite = pygame.sprite.GroupSingle()
         self.enemy_sprites = pygame.sprite.Group()
         self.collectable_sprites = pygame.sprite.Group()
@@ -34,6 +32,9 @@ class World:
         self.enemy_sprites.add(self.turtle)
         self.enemy_sprites.add(self.salamander)
         self.last_hit_time = 0
+        self.map = pytmx.load_pygame(os.path.join('data', 'maps', 'map1.tmx'))
+        self.map_pwidth = self.map.width * 16
+        self.map_pheight = self.map.width * 16
 
     def on_event(self, event):
         if event.type == pygame.QUIT:
@@ -42,15 +43,25 @@ class World:
     def on_loop(self):
         self.get_input()
         self.player_update()
+        self.camera()
         self.enemies_update()
         self.sprite_update()
-
+        
         self.kill()
         self.dt = self.clock.tick(60)
         pass
 
     def on_render(self):
         self._screen.fill((0,0,0))
+        for row in range(self.map.width):
+            for column in range (self.map.height):
+                self.mapdisplay = pygame.Vector2(row * 16, column * 16) - self.camera_pos
+                try:
+                    tile = self.map.get_tile_image(row, column, 0)
+                except:
+                    pass
+                if tile:
+                    self._screen.blit(tile, self.mapdisplay)
         self.player_sprite.draw(self._screen)
         self.enemy_sprites.draw(self._screen)
         pygame.display.flip()
@@ -69,8 +80,8 @@ class World:
         self.on_cleanup()
 
     def player_update(self):
-        self.player.pos = self.player.pos + self.player.velocity
-        self.player_sprite.update(self.player.pos)
+        self.player.pos = self.player.pos + self.velocity
+        self.player_sprite.update(self.player.pos - self.camera_pos)
         self.collision_check()
 
     
@@ -78,6 +89,17 @@ class World:
         for enemy in self.enemy_sprites:
             enemy.move_towards(self.player.pos)
 
+        
+    def camera(self):
+        self.camera_pos = self.camera_pos + self.velocity
+        if self.camera_pos.x <= 0:
+            self.camera_pos.x = 0
+        if self.camera_pos.y <= 0:
+            self.camera_pos.y = 0
+        if self.camera_pos.x >= self.map_pwidth - self.width:
+            self.camera_pos.x = self.map_pwidth - self.width
+        if self.camera_pos.y >= self.map_pheight - self.height:
+            self.camera_pos.y = self.map_pheight - self.height
 
     def sprite_update(self):
         pass
@@ -212,12 +234,33 @@ class Heart(GameEntity):
 
 class Salamander(GameEntity):
     def __init__(self, pos):
-        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'salamander.png')), 20, 20, 40 , 0.25)
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'salamander.png')), 20, 20, 40 , 0.25)        
         
-        
-if __name__ == "__main__" :
+def start_game():
     world = World()
     world.on_execute()
 
-pygame.quit
-	
+def show_questions():
+    print("If only this did something")
+    pass # Todo
+
+if __name__ == "__main__":
+    pygame.init()
+    screen = pygame.display.set_mode((320, 240), pygame.RESIZABLE | pygame.SCALED)
+    
+    custom_theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
+                                     title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
+    
+    menu = pygame_menu.Menu('', 320, 240, theme=custom_theme)
+    
+    logo_image = os.path.join('data', 'sprites', 'logo.png')
+    play_button_image = os.path.join('data', 'sprites', 'play_button.png')
+    questions_button_image = os.path.join('data', 'sprites', 'questions_button.png')
+
+    menu.add.image(logo_image)
+    menu.add.vertical_margin(20)
+    menu.add.banner(pygame_menu.BaseImage(image_path=play_button_image), start_game)
+    menu.add.vertical_margin(10)
+    menu.add.banner(pygame_menu.BaseImage(image_path=questions_button_image), show_questions)
+
+    menu.mainloop(screen)

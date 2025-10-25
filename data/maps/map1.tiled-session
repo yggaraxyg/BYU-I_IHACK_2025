@@ -1,0 +1,24 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "",
+    "expandedProjectPaths": [
+    ],
+    "file.lastUsedOpenFilter": "All Files (*)",
+    "fileStates": {
+        "#Walls&Floor": {
+            "dynamicWrapping": false
+        }
+    },
+    "last.imagePath": "/home/nate/Downloads",
+    "map.lastUsedFormat": "tmx",
+    "openFiles": [
+    ],
+    "project": "map1.tiled-project",
+    "recentFiles": [
+    ],
+    "tileset.embedInMap": true,
+    "tileset.type": 1
+}
