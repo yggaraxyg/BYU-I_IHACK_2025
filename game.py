@@ -1,6 +1,7 @@
 import pygame
 from pygame.locals import *
 import os
+import sys
 import random
 import pygame_menu
 import pytmx
@@ -27,6 +28,16 @@ class World:
         self.setup()
 
     def setup(self):
+        global question_list
+        if not question_list:
+            try:
+                question_box = questionbox()
+                question_box.getFromCSV(file_path)
+                question_list.extend(question_box.questionlist)
+                print(f"Loaded {len(question_box.questionlist)} default questions")
+            except Exception as e:
+                print(f"Could not load default questions: {e}")
+        
         self.camera_pos = pygame.Vector2(-0.5 * self.width,-0.5 * self.height)
         self.player_sprite = pygame.sprite.GroupSingle()
         self.enemy_sprites = pygame.sprite.Group()
@@ -47,6 +58,9 @@ class World:
     def on_event(self, event):
         if event.type == pygame.QUIT:
             self._running = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_t:
+                self.show_question_popup()
 
     def on_loop(self):
         self.get_input()
@@ -76,6 +90,7 @@ class World:
 
     def on_cleanup(self):
         pygame.quit()
+        sys.exit()
 
     def on_execute(self):
         if self.on_init() == False:
@@ -153,6 +168,53 @@ class World:
             self.player.facing.x = 1
         if self.player.facing == pygame.Vector2(0,0):
             self.player.facing = prev_facing
+
+    def show_question_popup(self):
+        global question_list
+        
+        if not question_list:
+            print("No questions available.")
+            return
+        
+        question_box = questionbox()
+        question_box.questionlist = question_list
+        question_set = question_box.getQuestion()
+        
+        question_text = question_set[0]
+        answer1 = question_set[1]
+        answer2 = question_set[2]
+        answer3 = question_set[3]
+        answer4 = question_set[4]
+        correct_answer_index = question_set[5]
+        
+        question_theme = pygame_menu.Theme(
+            background_color=(50, 50, 50, 200),
+            title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE
+        )
+
+        self.question_menu = pygame_menu.Menu('', 280, 180, theme=question_theme)
+        
+        self.question_menu.add.label(question_text, max_char=30, font_size=11, font_color=(255, 255, 255), align=pygame_menu.locals.ALIGN_CENTER)
+        self.question_menu.add.vertical_margin(10)
+        self.question_menu.add.button(f"A) {answer1}", lambda: self.answer_question(0, correct_answer_index, self.question_menu), font_size=10)
+        self.question_menu.add.button(f"B) {answer2}", lambda: self.answer_question(1, correct_answer_index, self.question_menu), font_size=10)
+        self.question_menu.add.button(f"C) {answer3}", lambda: self.answer_question(2, correct_answer_index, self.question_menu), font_size=10)
+        self.question_menu.add.button(f"D) {answer4}", lambda: self.answer_question(3, correct_answer_index, self.question_menu), font_size=10)
+        
+        # Show the menu
+        self.question_menu.mainloop(self._screen)
+
+    def answer_question(self, selected_answer, correct_answer, menu):
+        if selected_answer == correct_answer:
+            print("correct")
+            # Eventually give player loot they picked up; for now just heal 1 HP
+            self.player.hpmod(1)
+        else:
+            print("wrong")
+        
+        # Close the menu properly
+        menu.disable()
+        menu._close()
 
 
 
@@ -304,8 +366,7 @@ def create_csv_menu():
     csv_menu.add.button("Easy Mode", lambda: select_csv("data/questions/easy_mode.csv"), font_size=15)
     csv_menu.add.button("English", lambda: select_csv("data/questions/english.csv"), font_size=15)
     csv_menu.add.button("Geography", lambda: select_csv("data/questions/geography.csv"), font_size=15)
-    '''csv_menu.add.button("Math", lambda: select_csv("data/questions/math.csv"), font_size=15)
-    This one is broken because math.csv uses characters that break the parser'''
+    csv_menu.add.button("Math", lambda: select_csv("data/questions/math.csv"), font_size=15)
     csv_menu.add.button("Psych", lambda: select_csv("data/questions/psych.csv"), font_size=15)
 
     return csv_menu
@@ -385,4 +446,10 @@ if __name__ == "__main__":
     menu.add.vertical_margin(10)
     menu.add.banner(pygame_menu.BaseImage(image_path=questions_button_image), questions_submenu)
 
-    menu.mainloop(screen)
+    try:
+        menu.mainloop(screen)
+    except Exception as e:
+        pass
+    finally:
+        pygame.quit()
+        sys.exit()
