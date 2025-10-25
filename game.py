@@ -32,6 +32,11 @@ class World:
 
     def setup(self):
         global question_list
+        global starttime
+
+        if starttime == 0:
+            starttime = pygame.time.get_ticks()
+
         if not question_list:
             try:
                 question_box = questionbox()
@@ -91,7 +96,6 @@ class World:
     def on_render(self):
         global wincondition
         global winquantity
-        global starttime
         self._screen.fill((0,0,0))
         for row in range(self.map.width):
             for column in range (self.map.height):
@@ -283,6 +287,7 @@ class World:
             sys.exit()
 
     def get_input(self):
+        global starttime
         self.keys = pygame.key.get_pressed()
         self.player.velocity = pygame.Vector2(0,0)
         prev_facing = self.player.facing
@@ -312,8 +317,8 @@ class World:
             self.player.facing.x = 1
             self.last_moved= pygame.time.get_ticks()
 
-            shortdelay=pygame.time.get_ticks()
         if self.keys[pygame.K_ESCAPE]:
+            shortdelay=pygame.time.get_ticks()
             pause = pause_menu()
             try:
                 pause.mainloop(self._screen)
@@ -322,19 +327,19 @@ class World:
             
             starttime+=(pygame.time.get_ticks()-shortdelay)
 
-            if self.attack_cooldown <= 0:
-                if self.keys[pygame.K_UP]:
-                    self.attack('up')
-                    self.attack_cooldown = 300
-                elif self.keys[pygame.K_DOWN]:
-                    self.attack('down')
-                    self.attack_cooldown = 300
-                elif self.keys[pygame.K_LEFT]:
-                    self.attack('left')
-                    self.attack_cooldown = 300
-                elif self.keys[pygame.K_RIGHT]:
-                    self.attack('right')
-                    self.attack_cooldown = 300
+        if self.attack_cooldown <= 0:
+            if self.keys[pygame.K_UP]:
+                self.attack('up')
+                self.attack_cooldown = 300
+            elif self.keys[pygame.K_DOWN]:
+                self.attack('down')
+                self.attack_cooldown = 300
+            elif self.keys[pygame.K_LEFT]:
+                self.attack('left')
+                self.attack_cooldown = 300
+            elif self.keys[pygame.K_RIGHT]:
+                self.attack('right')
+                self.attack_cooldown = 300
         
         if self.player.facing == pygame.Vector2(0,0):
             self.player.facing = prev_facing
@@ -587,9 +592,9 @@ class Ogre(GameEntity):
         
 def start_game():
     global starttime
+    starttime = (pygame.time.get_ticks())
     world = World()
     world.on_execute()
-    starttime = (pygame.time.get_ticks()/1000)
 
 def user_csv():
     # Load user csv file
@@ -745,12 +750,10 @@ def win_conditions_menu():
 def set_wincondition(numb):
     global wincondition
     wincondition=numb
-    print(wincondition)
 
 def set_winquantity(numb):
     global winquantity
-    winquantity=numb
-    print(winquantity)
+    winquantity=int(numb)
     
     
 def main_menu():
@@ -766,7 +769,7 @@ def main_menu():
     
     menu.add.image(logo_image)
     menu.add.vertical_margin(20)
-    menu.add.banner(pygame_menu.BaseImage(image_path=play_button_image), start_game)
+    menu.add.banner(pygame_menu.BaseImage(image_path=play_button_image), lambda: start_game())
     menu.add.vertical_margin(10)
     menu.add.banner(pygame_menu.BaseImage(image_path=questions_button_image), questions_submenu)
 
@@ -783,15 +786,11 @@ if __name__ == "__main__":
 
     menu = main_menu()
 
-    print(wincondition)
-    print(winquantity)
     try:
         menu.mainloop(screen)
     except Exception as e:
         pass
     finally:
-        print(wincondition)
-        print(winquantity)
         pygame.quit()
         sys.exit()
     #'''
