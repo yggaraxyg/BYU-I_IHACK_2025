@@ -24,7 +24,7 @@ class questionbox:
                     if((wrongan != corans[1])and(wrongan not in wrongans)):                                                                                    
                         wrongans.append(wrongan)                                                                                                               
                         acin=True                                                                                                                              
-        else:                                                                                                                                                  
+        else:
              wrongans=[corans[2],corans[3],corans[4]]                                                                                                         
         questionset = [corans[0]]                                                                                                                              
         random.shuffle(wrongans)                                                                                                                               
