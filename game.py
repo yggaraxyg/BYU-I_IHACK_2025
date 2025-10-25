@@ -14,6 +14,7 @@ question_list = []
 file_path = "data/questions/easy_mode.csv" # Default CSV file path
 wincondition = 0
 winquantity = 10 
+starttime =0
 
 class World:
     def __init__(self):
@@ -90,6 +91,7 @@ class World:
     def on_render(self):
         global wincondition
         global winquantity
+        global starttime
         self._screen.fill((0,0,0))
         for row in range(self.map.width):
             for column in range (self.map.height):
@@ -107,8 +109,8 @@ class World:
         self.collectable_sprites.draw(self._screen)
         self.weapon_sprites.draw(self._screen)  # Add this line
         font = pygame.font.SysFont("Courier", 11)
-        text_surface = font.render(f"Score:{self.player.score} HP:{self.player.hp} Time:{(pygame.time.get_ticks()/1000):.2f}s Correct:{self.correct}/{self.answers}", True, (150, 150, 150))
-        if ((wincondition==3)&&(winquantity<=(pygame.time.get_ticks()/1000))):
+        text_surface = font.render(f"Score:{self.player.score} HP:{self.player.hp} Time:{((pygame.time.get_ticks()-starttime)/1000):.2f}s Correct:{self.correct}/{self.answers}", True, (150, 150, 150))
+        if ((wincondition==3)&&(winquantity<=((pygame.time.get_ticks()-starttime)/1000))):
             self.game_over("YOU WIN!")
         self._screen.blit(text_surface, (10, 10))
         pygame.display.flip()
@@ -199,12 +201,15 @@ class World:
             sprite_collision = pygame.sprite.spritecollide(col, self.player_sprite, False)
             if sprite_collision:
                 self.answers+=1
+                delay = pygame.time.get_ticks()
                 if(self.show_question_popup()):
                     self.correct+=1
                     if (abs(col.score)>abs(col.hp)):
                         self.player.score+=col.score
                     else:
                         self.player.hpmod(col.hp)
+                        
+                starttime+=(pygame.time.get_ticks()-delay)
                 col.die()
                 
                 if((wincondition==1)&&(winquantity<=self.correct)):
@@ -575,8 +580,10 @@ class Ogre(GameEntity):
         super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'ogre.png')), 100, 100, 100 , 0.05)
         
 def start_game():
+    global starttime
     world = World()
     world.on_execute()
+    starttime = (pygame.time.get_ticks()/1000)
 
 def user_csv():
     # Load user csv file
