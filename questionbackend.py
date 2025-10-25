@@ -1,4 +1,4 @@
-from csv-parser import parse_csv as pcsv
+from csv_parser import parse_csv as pcsv
 
 class questionbox:
 
