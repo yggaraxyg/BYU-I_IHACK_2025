@@ -55,16 +55,17 @@ class World:
         self.map_pwidth = self.map.width * 16
         self.map_pheight = self.map.height * 16
         self.last_spawn = 0
+        self.last_moved = 0 
         self.cameralock = pygame.Vector2(1,1)
         self.collisionmap()
         self.weapon_sprites = pygame.sprite.Group()
         self.attack_cooldown = 0
+        self.correct=0
+        self.answers=0;
         self.knockbackdir = pygame.Vector2(0,0)
 
     def on_loop(self):
-        try:
-            self.get_input()
-
+        self.get_input()
 
             self.player_update()
             self.camera()
@@ -73,14 +74,19 @@ class World:
         
             self.sprite_update()
         
-            self.weapon_update()
-            self.kill()
-            self.dt = self.clock.tick(60)
-        except Exception as e:
-            print (str(e))
-        if ((pygame.time.get_ticks()-self.last_spawn)>2000):
+        self.weapon_update()
+        self.kill()
+        self.dt = self.clock.tick(60)
+
+        if((pygame.time.get_ticks()-self.last_moved)>20000):
+            delay = 200
+        else:
+            delay = 2000           
+        if ((pygame.time.get_ticks()-self.last_spawn)>delay):
             self.last_spawn = pygame.time.get_ticks()
             self.spawn_random()
+        
+            
         pass
 
     def on_render(self):
@@ -101,7 +107,7 @@ class World:
         self.collectable_sprites.draw(self._screen)
         self.weapon_sprites.draw(self._screen)  # Add this line
         font = pygame.font.SysFont("Courier", 12)
-        text_surface = font.render(f"Score: {self.player.score} HP: {self.player.hp}", True, (150, 150, 150))
+        text_surface = font.render(f"Score: {self.player.score} HP: {self.player.hp} Time:{(pygame.time.get_ticks()/1000):.2f}s Correct: {self.correct}/{self.answers}", True, (150, 150, 150))
         self._screen.blit(text_surface, (10, 10))
         pygame.display.flip()
 
@@ -122,17 +128,17 @@ class World:
     def player_update(self):
         self.player_relative = self.player.pos - self.camera_pos
         self.player_sprite.update(self.player_relative)
+        self.player.update_rect(self.camera_pos)
         self.collision_check()
 
     
     def enemies_update(self):
         for enemy in self.enemy_sprites:
-
             enemy.move_towards(self.player.pos)
-            enemy.cam(self.camera_pos)
+            enemy.update_rect(self.camera_pos)
 
     def spawn_random(self):
-        etypes = [Salamander, Salamander, Salamander, Eyeball, Eyeball, Eyeball, Ogre]
+        etypes = [Salamander, Salamander, Salamander, Salamander, Salamander, Eyeball, Eyeball, Eyeball, Eyeball, Eyeball, Ogre]
         self.spawn = random.choice(etypes)(pygame.Vector2(random.randint(0,768),random.randint(0,1152)))
         self.enemy_sprites.add(self.spawn)
             
@@ -188,7 +194,9 @@ class World:
         for col in self.collectable_sprites:
             sprite_collision = pygame.sprite.spritecollide(col, self.player_sprite, False)
             if sprite_collision:
+                self.answers+=1
                 if(self.show_question_popup()):
+                    self.correct+=1
                     if (abs(col.score)>abs(col.hp)):
                         self.player.score+=col.score
                     else:
@@ -216,15 +224,15 @@ class World:
         if self.player.hp <= 0:
             self.player.kill()
             self._running = False
-            self.game_over()
+            self.game_over("GAME OVER")
 
-    def game_over(self):
+    def game_over(self, message):
         print("Game Over")
         theme = pygame_menu.Theme(background_color=(50, 50, 50, 200),
                                  title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
         
         game_over_menu = pygame_menu.Menu('', 320, 240, theme=theme)
-        game_over_menu.add.label("GAME OVER", font_size=20, font_color=(255, 0, 0))
+        game_over_menu.add.label(message, font_size=20, font_color=(255, 0, 0))
         game_over_menu.add.vertical_margin(10)
         game_over_menu.add.button("Restart", self.restart_game, font_size=15)
         game_over_menu.add.button("Main Menu", self.return_to_main_menu, font_size=15)
@@ -242,7 +250,7 @@ class World:
         menu = main_menu()
 
         try:
-            menu.mainloop(screen)
+            menu.mainloop(self._screen)
         except Exception as e:
             pass
         finally:
@@ -265,15 +273,19 @@ class World:
         if self.keys[pygame.K_w]:
             self.player.velocity.y -= self.player.speed * self.dt * self.speedmult
             self.player.facing.y = -1
+            self.last_moved= pygame.time.get_ticks()
         if self.keys[pygame.K_s]:
             self.player.velocity.y += self.player.speed * self.dt * self.speedmult
             self.player.facing.y = 1
+            self.last_moved= pygame.time.get_ticks()
         if self.keys[pygame.K_a]:
             self.player.velocity.x -= self.player.speed * self.dt * self.speedmult
             self.player.facing.x = -1
+            self.last_moved= pygame.time.get_ticks()
         if self.keys[pygame.K_d]:
             self.player.velocity.x += self.player.speed * self.dt * self.speedmult
             self.player.facing.x = 1
+            self.last_moved= pygame.time.get_ticks()
         
         if self.attack_cooldown <= 0:
             if self.keys[pygame.K_UP]:
@@ -312,18 +324,17 @@ class World:
         
         sword = Weapon(sword_pos, rotation)
         self.weapon_sprites.add(sword)
+        sword.update_rect(self.camera_pos)
         self.check_weapon_collision()
 
     def weapon_update(self):
         for weapon in self.weapon_sprites:
-            weapon_relative = weapon.pos - self.camera_pos
-            weapon.update(weapon_relative)
+            weapon.update_rect(self.camera_pos)
 
     def check_weapon_collision(self):
         for weapon in self.weapon_sprites:
             hit_enemies = pygame.sprite.spritecollide(weapon, self.enemy_sprites, False)
             for enemy in hit_enemies:
-                print(f"Hit {enemy.__class__.__name__}")
                 enemy.hurt(5)
                 if enemy.hp <= 0:
                     self.player.score += enemy.score
@@ -408,10 +419,9 @@ class GameEntity(pygame.sprite.Sprite):
         self.hp = hp
         self.score = score
         self.speed = speed
-        self.velocity = 0
+        self.velocity = pygame.Vector2(0,0)
         self.facing = pygame.Vector2(0,0)
-
-
+        self.cords = [pos.x, pos.y]
 
     def hpmod(self, num):
         self.hp+=num
@@ -463,6 +473,10 @@ class GameEntity(pygame.sprite.Sprite):
             direction=direction.normalize()
             self.pos+=direction*self.speed
             self.rect.center=self.pos
+    
+    def update_rect(self, camera_pos):
+        self.rect.center = self.pos - camera_pos
+        
     def cam(self, cam):
         self.rect = self.image.get_rect(center = self.pos - cam)
 
@@ -481,8 +495,8 @@ class Weapon(GameEntity):
         super().__init__(pos, rotated_image, 1, 1, 0, 0)
         self.rotation = rotation
     
-    def update(self, pos):
-        self.rect = self.image.get_rect(center = pos)
+    def update(self, camera_pos):
+        self.rect.center = self.pos - camera_pos
 
 class Turtle(GameEntity):
     def __init__(self, pos):
@@ -639,7 +653,7 @@ def main_menu():
 
 if __name__ == "__main__":
 
-    '''
+    
     start_game()
     '''
     
