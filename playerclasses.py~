@@ -1,7 +1,0 @@
-class player:
-    def __init__(self, cordx, cordy, maxhp, hp):
-        self.cords = [cordx,cordy]
-        self.maxhp= maxhp
-        self.hp = hp
-
-class
