@@ -124,6 +124,9 @@ class World:
                 print(f"Loaded {len(question_box.questionlist)} default questions")
             except Exception as e:
                 print(f"Could not load default questions: {e}")
+        pygame.mixer.init()
+        pygame.mixer.music.load(os.path.join('data', 'music.wav'))
+        pygame.mixer.music.play(-1)
         
         self.icon = pygame.image.load(os.path.join('data', 'icon.png'))
         pygame.display.set_icon(self.icon)
@@ -250,10 +253,13 @@ class World:
                 self.mapdisplay = pygame.Vector2(row * 16 + offsetx, column * 16 + offsety) - self.camera_pos
                 try:
                     tile = self.map.get_tile_image(row, column, 0)
+                    tile1 = self.map.get_tile_image(row, column, 1)
                 except:
                     pass
                 if tile:
                     self._screen.blit(tile, self.mapdisplay)
+                if tile1:
+                    self._screen.blit(tile1, self.mapdisplay)
         
         # Optimized debug rendering - only render what's visible
         if getattr(self, 'show_collision_debug', False):
@@ -548,7 +554,7 @@ class World:
             if self.player.velocity.y > 0 and next_tile.y != prev_tile.y and next_tile.x == prev_tile.x:
                 self.player.pos.y = (int(next_tile.y) * 16) - 1
             if self.player.velocity.y < 0 and next_tile.y != prev_tile.y and next_tile.x == prev_tile.x:
-                self.player.pos.y = (int(next_tile.y) * 16) + 24
+                self.player.pos.y = (int(next_tile.y) * 16) + 16
             if self.map.get_tile_gid(next_tile.x, prev_tile.y, 1) == 0:
                 self.player.pos.x = next_pos.x
             if self.map.get_tile_gid(prev_tile.x, next_tile.y, 1) == 0:
@@ -875,7 +881,7 @@ class World:
         for collectible in self.collectible_sprites:
             self.kill(collectible)
             del(collectible)
-        self.player.pos = pygame.Vector2(60,60)
+        self.player.pos = pygame.Vector2(28 * 16,80 * 16)
         starttime= pygame.time.get_ticks()
         self.player.score = 0
         self.player.hp = self.player.maxhp
