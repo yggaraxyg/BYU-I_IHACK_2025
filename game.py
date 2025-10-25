@@ -108,7 +108,7 @@ class World:
         self.weapon_sprites.draw(self._screen)  # Add this line
         font = pygame.font.SysFont("Courier", 11)
         text_surface = font.render(f"Score:{self.player.score} HP:{self.player.hp} Time:{(pygame.time.get_ticks()/1000):.2f}s Correct:{self.correct}/{self.answers}", True, (150, 150, 150))
-        if ((wincondition==3)&&(winquantity<=(pygame.time.get_ticks()/1000))):
+        if ((wincondition==3) and (winquantity<=(pygame.time.get_ticks()/1000))):
             self.game_over("YOU WIN!")
         self._screen.blit(text_surface, (10, 10))
         pygame.display.flip()
@@ -207,11 +207,11 @@ class World:
                         self.player.hpmod(col.hp)
                 col.die()
                 
-                if((wincondition==1)&&(winquantity<=self.correct)):
+                if((wincondition==1) and (winquantity<=self.correct)):
                     self.game_over("YOU WIN!")
-                if((wincondition==4)&&(winquantity<=self.answers)):
+                if((wincondition==4) and (winquantity<=self.answers)):
                     self.game_over("YOU WIN!")
-                if((wincondition==2)&&(winquantity<=self.player.score)):
+                if((wincondition==2) and (winquantity<=self.player.score)):
                     self.game_over("YOU WIN!")
 
         prev_tile =  pygame.Vector2(self.player.pos.x / 16, self.player.pos.y /16)    
@@ -605,7 +605,7 @@ def create_questions_menu():
     theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
                                      title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
     
-    question_menu = pygame_menu.Menu('Manage ?s', 320, 240, theme=theme)
+    question_menu = pygame_menu.Menu('Options', 320, 240, theme=theme)
 
     csv_submenu = create_csv_menu()
     manual_submenu = create_manual_menu()
@@ -614,7 +614,6 @@ def create_questions_menu():
     question_menu.add.button("Manual Input", manual_submenu, font_size=15)
     question_menu.add.button("Choose Default CSV", csv_submenu, font_size=15)
     question_menu.add.button("Load User CSV", user_csv, font_size=15)
-    question_menu.add.button("test csv", lambda: print(question_list), font_size=15)
     question_menu.add.button("Change Win Condition", wincondition,font_size=15)
     return question_menu
 
