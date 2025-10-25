@@ -120,6 +120,9 @@ class World:
             except Exception as e:
                 print(f"Could not load default questions: {e}")
         
+        self.icon = pygame.image.load(os.path.join('data', 'icon.png'))
+        pygame.display.set_icon(self.icon)
+        pygame.display.set_caption('Knowledge Knights Version 1.0')
         self.camera_pos = pygame.Vector2(-0.5 * self.width,-0.5 * self.height)
         self.player_sprite = pygame.sprite.GroupSingle()
         self.enemy_sprites = pygame.sprite.Group()
@@ -1243,7 +1246,7 @@ if __name__ == "__main__":
 
     '''
     start_game()
-    '''
+    
     
     pygame.init()
     screen = pygame.display.set_mode((320, 240), pygame.RESIZABLE | pygame.SCALED)
