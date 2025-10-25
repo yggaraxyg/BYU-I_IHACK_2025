@@ -64,7 +64,6 @@ class World:
     def on_loop(self):
         self.get_input()
 
-
         self.player_update()
         self.camera()
       
@@ -79,11 +78,11 @@ class World:
         if((pygame.time.get_ticks()-self.last_moved)>20000):
             delay = 200
         else:
-            delay = 2000
-            
+            delay = 2000           
         if ((pygame.time.get_ticks()-self.last_spawn)>delay):
             self.last_spawn = pygame.time.get_ticks()
             self.spawn_random()
+        
             
         pass
 
