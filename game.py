@@ -87,8 +87,9 @@ def find_path_with_library(start_pos, goal_pos, collision_map, map_width, map_he
 question_list = []
 file_path = "data/questions/easy_mode.csv" # Default CSV file path
 wincondition = 0
-winquantity = 10 
-starttime =0
+winquantity = 10
+starttime = 0
+help_cooldown = 100000
 
 class World:
     def __init__(self):
@@ -185,6 +186,7 @@ class World:
         self.cached_pathfinding_grid = create_pathfinding_grid(self.collision_grid, self.map.width, self.map.height)
     
     def on_loop(self):
+        global help_cooldown
         self.get_input()
         self.player_update()
         self.camera()
@@ -193,6 +195,7 @@ class World:
         self.weapon_update()
         self.kill()
         self.dt = self.clock.tick(60)
+        help_cooldown -= self.dt
 
         # Optimize enemy management for performance
         MAX_ENEMIES = 20  # Reduced from 20
@@ -318,7 +321,6 @@ class World:
         self.player_sprite.update(self.player_relative)
         self.player.update_rect(self.camera_pos)
         self.collision_check()
-        print(self.player.pos)
 
     
     def enemies_update(self):
@@ -513,8 +515,13 @@ class World:
                     self.game_over("YOU WIN!")
                 if((wincondition==2) and (winquantity<=self.player.score)):
                     self.game_over("YOU WIN!")
-
-
+            sprite_collision = pygame.sprite.spritecollide(col, self.enemy_sprites, False)
+            if sprite_collision:
+                if((col.score)>(col.hp)):
+                    sprite_collision[0].score+=col.score
+                else:
+                    sprite_collision[0].score+=col.hp*5
+                col.die()
         prev_tile =  pygame.Vector2(self.player.pos.x / 16, self.player.pos.y /16)    
         next_pos = self.player.pos + self.player.velocity
         next_tile =  pygame.Vector2(next_pos.x / 16 , next_pos.y / 16)           
@@ -606,6 +613,14 @@ class World:
             self.player.facing.x = 1
             self.last_moved= pygame.time.get_ticks()
 
+        if self.keys[pygame.K_h]:
+            global help_cooldown
+            if help_cooldown <= 0:
+                help_cooldown = 50000
+                shortdelay=pygame.time.get_ticks()
+                self.helper_guy()
+                starttime+=(pygame.time.get_ticks()-shortdelay)
+
         if self.keys[pygame.K_ESCAPE]:
             shortdelay=pygame.time.get_ticks()
             pause = pause_menu()
@@ -689,6 +704,34 @@ class World:
                     for obj in layer:
                         self.collision_tiles.append(pygame.Rect(obj.x, obj.y, obj.width, obj.height))
     
+    def helper_guy(self):
+        theme = pygame_menu.Theme(
+            background_color=(50, 50, 50, 200),
+            title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE
+        )
+
+        help_menu = pygame_menu.Menu('', 320, 240, theme=theme)
+        help_menu.add.label("Need help? Here's an answer to a question:", font_size=15, font_color=(255, 255, 0))
+        # Display a random question from the question list with its answer
+        global question_list
+        if question_list:
+            random_question = random.choice(question_list)
+            question_text = random_question[0]
+            correct_answer_text = random_question[1]
+            help_menu.add.label(f"Q: {question_text}", font_size=12, max_char=40, font_color=(255, 255, 255))
+            help_menu.add.vertical_margin(5)
+            help_menu.add.label(f"A: {correct_answer_text}", font_size=12, max_char=40, font_color=(0, 255, 0))
+        else:
+            help_menu.add.label("No questions available.", font_size=12)
+        help_menu.add.button("Heal me up", lambda: self.player.heal(10), font_size=15)
+        help_menu.add.vertical_margin(10)
+        help_menu.add.button("Continue", lambda: exit_menu(help_menu), font_size=15)
+
+        try:
+            help_menu.mainloop(self._screen)
+        except Exception as e:
+            pass
+
     def show_question_popup(self):
         global question_list
         
@@ -1077,10 +1120,8 @@ class Dragon(GameEntity):
         self.last_spawn = 0
         
     def updatepic(self, pos, group, facing_direction):
-        print(type(self))
         dist = (self.pos.x - pos.x, self.pos.y - pos.y)
         far = math.hypot(*dist)
-        print(far)
         if (far<=100):
             if facing_direction.x < 0:
                 self.image = self.sprites['leftnear']
@@ -1270,7 +1311,18 @@ def set_wincondition(numb):
 def set_winquantity(numb):
     global winquantity
     winquantity=int(numb)
+
+def how_to_play():
+    theme = pygame_menu.Theme(background_color=(50, 50, 50, 200),
+                                     title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
     
+    help_menu = pygame_menu.Menu('How to Play', 320, 240, theme=theme)
+    help_menu.add.label("Use WASD to move your character.", font_size=12, font_color=(255, 255, 255))
+    help_menu.add.label("Use Arrow Keys to attack in that direction.", font_size=12, font_color=(255, 255, 255))
+    help_menu.add.label("Press H to get help on a cooldown.", font_size=12, font_color=(255, 255, 255))
+    help_menu.add.label("Answer questions correctly to gain health or score.", font_size=12, font_color=(255, 255, 255))
+
+    return help_menu
     
 def main_menu():
     theme = pygame_menu.Theme(background_color=(0, 0, 0, 0), title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
@@ -1284,17 +1336,19 @@ def main_menu():
     questions_button_image = os.path.join('data', 'sprites', 'questions_button.png')
     
     menu.add.image(logo_image)
-    menu.add.vertical_margin(20)
+    menu.add.vertical_margin(10)
     menu.add.banner(pygame_menu.BaseImage(image_path=play_button_image), lambda: start_game())
     menu.add.vertical_margin(10)
     menu.add.banner(pygame_menu.BaseImage(image_path=questions_button_image), questions_submenu)
+    menu.add.vertical_margin(10)
+    menu.add.button("How to Play", how_to_play(), font_size=10, font_color=(255, 255, 255))
 
     return menu
 
 if __name__ == "__main__":
 
 
-    start_game()
+    #start_game() # Remove this line before turning in
     
     
     pygame.init()
@@ -1310,93 +1364,3 @@ if __name__ == "__main__":
         pygame.quit()
         sys.exit()
     #'''
-
-import heapq
-from collections import deque
-
-class PathNode:
-    def __init__(self, x, y, g_cost=0, h_cost=0, parent=None):
-        self.x = x
-        self.y = y
-        self.g_cost = g_cost  # Distance from start
-        self.h_cost = h_cost  # Heuristic distance to goal
-        self.f_cost = g_cost + h_cost  # Total cost
-        self.parent = parent
-    
-    def __lt__(self, other):
-        return self.f_cost < other.f_cost
-
-def heuristic(node1, node2):
-    """Manhattan distance heuristic"""
-    return abs(node1.x - node2.x) + abs(node1.y - node2.y)
-
-def get_neighbors(node, map_width, map_height):
-    """Get valid neighboring positions"""
-    neighbors = []
-    directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]  # Up, Down, Right, Left
-    
-    for dx, dy in directions:
-        new_x, new_y = node.x + dx, node.y + dy
-        if 0 <= new_x < map_width and 0 <= new_y < map_height:
-            neighbors.append(PathNode(new_x, new_y))
-    
-    return neighbors
-
-def a_star_pathfind(start_pos, goal_pos, collision_map, map_width, map_height):
-    """A* pathfinding algorithm"""
-    # Convert world positions to grid coordinates
-    start_x = int(start_pos.x // 16)
-    start_y = int(start_pos.y // 16)
-    goal_x = int(goal_pos.x // 16)
-    goal_y = int(goal_pos.y // 16)
-    
-    # Check bounds
-    if not (0 <= start_x < map_width and 0 <= start_y < map_height):
-        return []
-    if not (0 <= goal_x < map_width and 0 <= goal_y < map_height):
-        return []
-    
-    start_node = PathNode(start_x, start_y)
-    goal_node = PathNode(goal_x, goal_y)
-    
-    open_list = []
-    closed_set = set()
-    
-    heapq.heappush(open_list, start_node)
-    
-    while open_list:
-        current_node = heapq.heappop(open_list)
-        
-        if (current_node.x, current_node.y) in closed_set:
-            continue
-            
-        closed_set.add((current_node.x, current_node.y))
-        
-        # Check if we reached the goal
-        if current_node.x == goal_node.x and current_node.y == goal_node.y:
-            # Reconstruct path
-            path = []
-            while current_node:
-                # Convert back to world coordinates
-                world_pos = pygame.Vector2(current_node.x * 16 + 8, current_node.y * 16 + 8)
-                path.append(world_pos)
-                current_node = current_node.parent
-            return path[::-1]  # Reverse to get start-to-goal order
-        
-        # Check neighbors
-        for neighbor in get_neighbors(current_node, map_width, map_height):
-            if (neighbor.x, neighbor.y) in closed_set:
-                continue
-            
-            # Check if this tile is blocked
-            if collision_map.get((neighbor.x, neighbor.y), False):
-                continue
-            
-            neighbor.g_cost = current_node.g_cost + 1
-            neighbor.h_cost = heuristic(neighbor, goal_node)
-            neighbor.f_cost = neighbor.g_cost + neighbor.h_cost
-            neighbor.parent = current_node
-            
-            heapq.heappush(open_list, neighbor)
-    
-    return []  # No path found
