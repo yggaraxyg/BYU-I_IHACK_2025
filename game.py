@@ -2,9 +2,9 @@ import pygame
 from pygame.locals import *
 import os
 import random
-'''import pygame_menu
+import pygame_menu
 import pytmx
-from pytmx.util_pygame import load_pygame'''
+from pytmx.util_pygame import load_pygame
 
 class World:
     def __init__(self):
@@ -103,9 +103,31 @@ class Turtle(pygame.sprite.Sprite):
         self.image = image
         self.rect = self.image.get_rect(center = pos)
 
-if __name__ == "__main__" :
+def start_game():
     world = World()
     world.on_execute()
 
-pygame.quit
-	
+def show_questions():
+    print("If only this did something")
+    pass # Todo
+
+if __name__ == "__main__":
+    pygame.init()
+    screen = pygame.display.set_mode((320, 240), pygame.RESIZABLE | pygame.SCALED)
+    
+    custom_theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
+                                     title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
+    
+    menu = pygame_menu.Menu('', 320, 240, theme=custom_theme)
+    
+    logo_image = os.path.join('data', 'sprites', 'logo.png')
+    play_button_image = os.path.join('data', 'sprites', 'play_button.png')
+    questions_button_image = os.path.join('data', 'sprites', 'questions_button.png')
+
+    menu.add.image(logo_image)
+    menu.add.vertical_margin(20)
+    menu.add.banner(pygame_menu.BaseImage(image_path=play_button_image), start_game)
+    menu.add.vertical_margin(10)
+    menu.add.banner(pygame_menu.BaseImage(image_path=questions_button_image), show_questions)
+
+    menu.mainloop(screen)
