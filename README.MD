@@ -22,6 +22,7 @@ pip install pathfinding
 - Left Shift - move twice as fast
 - Arrow keys - attack in direction pressed
 - H - receive help (on cooldown)
+- U - access upgrades menu
 
 **Interface:**
 - Escape - pause game
