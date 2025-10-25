@@ -357,7 +357,7 @@ class World:
                     self.collectable_sprites.add(glob)
                     enemy.die()
         
-        pygame.time.set_timer(pygame.USEREVENT + 1, 300)
+        pygame.time.set_timer(pygame.USEREVENT + 1, 150)
 
     def on_event(self, event):
         if event.type == pygame.QUIT:
