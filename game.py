@@ -90,6 +90,10 @@ wincondition = 0
 winquantity = 10
 starttime = 0
 help_cooldown = 100000
+weapon_damage = 5
+weapon_upgrade_cost = 5
+player_max_hp = 10
+hp_upgrade_cost = 50
 
 class World:
     def __init__(self):
@@ -198,7 +202,7 @@ class World:
         help_cooldown -= self.dt
 
         # Optimize enemy management for performance
-        MAX_ENEMIES = 20  # Reduced from 20
+        MAX_ENEMIES = 20
         current_enemy_count = len(self.enemy_sprites)
 
         if current_enemy_count < MAX_ENEMIES:
@@ -211,9 +215,6 @@ class World:
                 self.last_spawn = pygame.time.get_ticks()
                 self.spawn_random()
         
-        # More aggressive culling of distant enemies
-        if current_enemy_count > 8:
-            self.cull_distant_enemies()
         if current_enemy_count > MAX_ENEMIES:
             self.cull_distant_enemies()
 
@@ -622,6 +623,11 @@ class World:
                 self.helper_guy()
                 starttime+=(pygame.time.get_ticks()-shortdelay)
 
+        if self.keys[pygame.K_u]:
+            shortdelay=pygame.time.get_ticks()
+            self.upgrade_store()
+            starttime+=(pygame.time.get_ticks()-shortdelay)
+
         if self.keys[pygame.K_ESCAPE]:
             shortdelay=pygame.time.get_ticks()
             pause = pause_menu()
@@ -677,10 +683,11 @@ class World:
             weapon.update_rect(self.camera_pos)
 
     def check_weapon_collision(self):
+        global weapon_damage
         for weapon in self.weapon_sprites:
             hit_enemies = pygame.sprite.spritecollide(weapon, self.enemy_sprites, False)
             for enemy in hit_enemies:
-                enemy.hurt(5)
+                enemy.hurt(weapon_damage)
                 if enemy.hp <= 0:
                     if(random.choice([True,False])):
                         glob=Heart(enemy.pos, (enemy.score/5))
@@ -705,6 +712,44 @@ class World:
                     for obj in layer:
                         self.collision_tiles.append(pygame.Rect(obj.x, obj.y, obj.width, obj.height))
     
+    def upgrade_store(self):
+        theme = pygame_menu.Theme(
+            background_color=(50, 50, 50, 200),
+            title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE
+        )
+
+        store_menu = pygame_menu.Menu('', 320, 240, theme=theme)
+        store_menu.add.button(f"Increase weapon damage (Cost: {weapon_upgrade_cost} points)", lambda: self.upgrade_weapon(store_menu), font_size=15)
+        store_menu.add.vertical_margin(10)
+        store_menu.add.button(f"Increase max health (Cost: {hp_upgrade_cost} points)", lambda: self.upgrade_health(store_menu), font_size=15)
+        store_menu.add.vertical_margin(10)
+        store_menu.add.button("Exit", lambda: exit_menu(store_menu), font_size=15)
+
+        try:
+            store_menu.mainloop(self._screen)
+        except Exception as e:
+            pass
+    
+    def upgrade_weapon(self, menu):
+        global weapon_damage
+        global weapon_upgrade_cost
+        if self.player.score >= weapon_upgrade_cost:
+            self.player.score -= weapon_upgrade_cost
+            weapon_damage += 1
+            weapon_upgrade_cost += 5
+            exit_menu(menu)
+    
+    def upgrade_health(self, menu):
+        global player_max_hp
+        global hp_upgrade_cost
+        if self.player.score >= hp_upgrade_cost:
+            self.player.score -= hp_upgrade_cost
+            player_max_hp += 5
+            self.player.maxhp = player_max_hp
+            self.player.hp = player_max_hp
+            hp_upgrade_cost += 50
+            exit_menu(menu)
+
     def helper_guy(self):
         theme = pygame_menu.Theme(
             background_color=(50, 50, 50, 200),
@@ -973,7 +1018,7 @@ class Player(GameEntity):
             'right': pygame.image.load(os.path.join('data', 'sprites', 'player_right.png')),
         }
 
-        super().__init__(pos, self.sprites['down'], 10, 10, 0, 0.1)
+        super().__init__(pos, self.sprites['down'], player_max_hp, 10, 0, 0.1)
         self.current_direction = 'down'
     
     def update_sprite(self, facing_direction):
@@ -1269,10 +1314,11 @@ def how_to_play():
                                      title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
     
     help_menu = pygame_menu.Menu('How to Play', 320, 240, theme=theme)
-    help_menu.add.label("Use WASD to move your character.", font_size=12, font_color=(255, 255, 255))
-    help_menu.add.label("Use Arrow Keys to attack in that direction.", font_size=12, font_color=(255, 255, 255))
-    help_menu.add.label("Press H to get help on a cooldown.", font_size=12, font_color=(255, 255, 255))
-    help_menu.add.label("Answer questions correctly to gain health or score.", font_size=12, font_color=(255, 255, 255))
+    help_menu.add.label("Use WASD to move your character.", font_size=10, font_color=(255, 255, 255))
+    help_menu.add.label("Use Arrow Keys to attack in that direction.", font_size=10, font_color=(255, 255, 255))
+    help_menu.add.label("Press H to get help on a cooldown.", font_size=10, font_color=(255, 255, 255))
+    help_menu.add.label("Press U to open the upgrade store.", font_size=10, font_color=(255, 255, 255))
+    help_menu.add.label("Answer questions correctly to gain health or score.", font_size=10, font_color=(255, 255, 255))
 
     return help_menu
     
