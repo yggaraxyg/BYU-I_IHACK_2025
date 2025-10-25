@@ -2,9 +2,9 @@ import pygame
 from pygame.locals import *
 import os
 import random
-import pygame_menu
+'''import pygame_menu
 import pytmx
-from pytmx.util_pygame import load_pygame
+from pytmx.util_pygame import load_pygame'''
 
 class World:
     def __init__(self):
@@ -55,6 +55,7 @@ class World:
         self.player = Player(self.player_pos, self.player_sprite)
 
     def sprite_update(self):
+        pass # todo
 
 
 
