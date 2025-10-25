@@ -33,12 +33,16 @@ class World:
         self.collectable_sprites = pygame.sprite.Group()
         self.player = Player(pygame.Vector2(60,60))
         self.turtle = Turtle(pygame.Vector2(20, 20))
-        self.salamander = Salamander(pygame.Vector2(100,100))
-        self.eyeball = Eyeball(pygame.Vector2(300,300))
-        self.ogre = Ogre(pygame.Vector2(200,200))
+        #self.salamander = Salamander(pygame.Vector2(100,100))
+        self.eyeball = Eyeball(pygame.Vector2(40,200))
+        #self.ogre = Ogre(pygame.Vector2(200,200))
+        self.treasure = Treasure(pygame.Vector2(200,40), 100)
         self.player_sprite.add(self.player)
         self.enemy_sprites.add(self.turtle)
-        self.enemy_sprites.add(self.salamander)
+        #self.enemy_sprites.add(self.salamander)
+        self.enemy_sprites.add(self.eyeball)
+        #self.enemy_sprites.add(self.ogre)
+        self.collectable_sprites.add(self.treasure)
         self.last_hit_time = 0
         self.map = pytmx.load_pygame(os.path.join('data', 'maps', 'map1.tmx'))
         self.map_pwidth = self.map.width * 16
@@ -72,6 +76,7 @@ class World:
                     self._screen.blit(tile, self.mapdisplay)
         self.player_sprite.draw(self._screen)
         self.enemy_sprites.draw(self._screen)
+        self.collectable_sprites.draw(self._screen)
         pygame.display.flip()
 
     def on_cleanup(self):
@@ -123,9 +128,16 @@ class World:
                 self.player.pos -= self.player.facing * 2
         else:
             self.player.pos -= self.player.facing * 2
-        sprite_collision = pygame.sprite.spritecollide(self.player, self.collectable_sprites, False)
-        
-    
+        print("Yam Man")
+        print(self.player.score)
+        for col in self.collectable_sprites:
+            print("Ham Man")
+            sprite_collision = pygame.sprite.spritecollide(col, self.player_sprite, False)
+            if sprite_collision:
+                print("Bam Man")
+                self.player.score+=col.score
+                col.die()
+            
     def kill(self):
         if self.player.hp <= 0:
             self.player.kill()
@@ -211,7 +223,7 @@ class GameEntity(pygame.sprite.Sprite):
         self.cords[1]=y
 
     def die(self):
-        self.kill
+        self.kill()
 
     def move_towards(self, pos):
         direction = pos-self.pos
@@ -307,7 +319,7 @@ def create_csv_menu():
     return csv_menu
 
 if __name__ == "__main__":
-    '''
+    
     start_game()
     '''
     
@@ -332,3 +344,4 @@ if __name__ == "__main__":
     menu.add.banner(pygame_menu.BaseImage(image_path=questions_button_image), questions_submenu)
 
     menu.mainloop(screen)
+    #'''
