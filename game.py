@@ -144,6 +144,7 @@ class World:
     def enemies_update(self):
         for enemy in self.enemy_sprites:
             enemy.move_towards(self.player.pos)
+            enemy.update_sprite(self.player.pos - enemy.pos)
             enemy.update_rect(self.camera_pos)
 
     def spawn_random(self):
@@ -590,6 +591,9 @@ class Weapon(GameEntity):
 class Turtle(GameEntity):
     def __init__(self, pos):
         super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'turtle.png')), 25, 25, 10, 0)
+    
+    def update_sprite(self, facing_direction):
+        self.image = pygame.image.load(os.path.join('data', 'sprites', 'turtle.png'))
 
 
 class Treasure(GameEntity):
@@ -602,16 +606,41 @@ class Heart(GameEntity):
 
 class Salamander(GameEntity):
     def __init__(self, pos):
-        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'salamander.png')), 10, 10, 20 , 0.20)        
+        self.sprites = {
+            'right': pygame.image.load(os.path.join('data', 'sprites', 'salamander.png')),
+            'left': pygame.transform.flip(pygame.image.load(os.path.join('data', 'sprites', 'salamander.png')), True, False),
+        }
+
+        super().__init__(pos,self.sprites['right'], 10, 10, 20 , 0.20)        
+
+    def update_sprite(self, facing_direction):
+        if facing_direction.x < 0:
+            self.image = self.sprites['left']
+        else:
+            self.image = self.sprites['right']
 
 class Eyeball(GameEntity):
     def __init__(self, pos):
         super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'florb.png')), 20, 20, 10 , 0)
+    
+    def update_sprite(self, facing_direction):
+        self.image = pygame.image.load(os.path.join('data', 'sprites', 'florb.png'))
 
 class Ogre(GameEntity):
     def __init__(self, pos):
-        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'ogre.png')), 100, 100, 100 , 0.05)
+        self.sprites = {
+            'right': pygame.image.load(os.path.join('data', 'sprites', 'ogre.png')),
+            'left': pygame.transform.flip(pygame.image.load(os.path.join('data', 'sprites', 'ogre.png')), True, False),
+        }
         
+        super().__init__(pos,self.sprites['right'], 100, 100, 100 , 0.05)
+        self.current_direction = 'right'
+    
+    def update_sprite(self, facing_direction):
+        if facing_direction.x < 0:
+            self.image = self.sprites['left']
+        else:
+            self.image = self.sprites['right']
 def start_game():
     global starttime
     starttime = (pygame.time.get_ticks())
