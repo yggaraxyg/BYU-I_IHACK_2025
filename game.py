@@ -9,6 +9,7 @@ from pytmx.util_pygame import load_pygame
 import tkinter
 from tkinter import filedialog
 from questionbackend import *
+import math
 from pathfinding.core.diagonal_movement import DiagonalMovement
 from pathfinding.core.grid import Grid
 from pathfinding.finder.a_star import AStarFinder
@@ -125,8 +126,10 @@ class World:
         self.collectable_sprites = pygame.sprite.Group()
         self.player = Player(pygame.Vector2(60,60))
         self.turtle = Turtle(pygame.Vector2(20, 20))
+        self.dragon = Dragon(pygame.Vector2(608, 1049))
         self.player_sprite.add(self.player)
         self.enemy_sprites.add(self.turtle)
+        self.enemy_sprites.add(self.dragon)
         self.last_hit_time = 0
         self.map = pytmx.load_pygame(os.path.join('data', 'maps', 'map1.tmx'))
         self.map_pwidth = self.map.width * 16
@@ -280,12 +283,13 @@ class World:
         self.enemy_sprites.draw(self._screen)
         self.collectable_sprites.draw(self._screen)
         self.weapon_sprites.draw(self._screen)
+        pygame.draw.rect(self._screen, (0,0,0), (0,0,self.width,20))
         
         font = pygame.font.SysFont("Courier", 11)
-        text_surface = font.render(f"Score:{self.player.score} HP:{self.player.hp} Time:{((pygame.time.get_ticks()-starttime)/1000):.2f}s Correct:{self.correct}/{self.answers}", True, (150, 150, 150))
+        text_surface = font.render(f"Score:{self.player.score}  HP:{self.player.hp}  Time:{((pygame.time.get_ticks()-starttime)/1000):.2f}s  Correct:{self.correct}/{self.answers}", False, (150, 150, 150))
         if ((wincondition==3) and (winquantity<=((pygame.time.get_ticks()-starttime)/1000))):
             self.game_over("YOU WIN!")
-        self._screen.blit(text_surface, (10, 10))
+        self._screen.blit(text_surface, (10, 5))
         
         pygame.display.flip()
 
@@ -309,6 +313,7 @@ class World:
         self.player_sprite.update(self.player_relative)
         self.player.update_rect(self.camera_pos)
         self.collision_check()
+        print(self.player.pos)
 
     
     def enemies_update(self):
@@ -354,6 +359,7 @@ class World:
             
             enemy.update_sprite(self.player.pos - enemy.pos)
             enemy.update_rect(self.camera_pos)
+        self.dragon.updatepic(self.player.pos, self.enemy_sprites)
 
     def spawn_random(self):
         """Spawn an enemy in a random walkable location"""
@@ -458,9 +464,13 @@ class World:
             if sprite_collision:
                 for enemy in self.enemy_sprites:
                     if pygame.sprite.collide_rect(enemy, self.player):
-                        
+                            
                         self.knockbackdir = self.player.pos - enemy.pos
                         #print (str(knockbackdir))
+                        if(type(enemy)==Bullet):
+                            enemy.die()
+                            del(enemy)
+                        
                         
                 #print(type(sprite_collision[0]))
                 self.last_hit_time = current_time
@@ -996,6 +1006,45 @@ class Ogre(GameEntity):
             self.image = self.sprites['left']
         else:
             self.image = self.sprites['right']
+
+
+class Dragon(GameEntity):
+    def __init__(self, pos):
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'Dragon.png')), 500, 500, 10000 , 0)
+        self.sprites = {
+            'rightfar' :pygame.image.load(os.path.join('data', 'sprites', 'Dragon.png')),
+            'rightnear':pygame.image.load(os.path.join('data', 'sprites', 'DragonOpen.png')),
+            'leftfar'  :pygame.transform.flip(pygame.image.load(os.path.join('data', 'sprites', 'Dragon.png')), True, False),
+            'leftnear' :pygame.transform.flip(pygame.image.load(os.path.join('data', 'sprites', 'DragonOpen.png')), True, False),
+        }
+        self.last_spawn = 0
+        
+    def updatepic(self, pos, group, facing_direction):
+        dist = (self.pos.x - pos.x, self.pos.y - pos.y)
+        far = math.hypot(*dist)
+        print(far)
+        if (far<=100):
+            if facing_direction.x < 0:
+                self.image = self.sprites['leftnear']
+            else:
+                self.image = self.sprites['rightnear']
+            if ((pygame.time.get_ticks()-self.last_spawn)>10000):
+                self.last_spawn = pygame.time.get_ticks()
+                for i in range(5):
+                    glob = Bullet(pygame.Vector2(self.pos.x+random.randint(-25, 25),self.pos.y+random.randint(-25, 25)))
+                    group.add(glob)
+        else:
+            if facing_direction.x < 0:
+                self.image = self.sprites['leftfar']
+            else:
+                self.image = self.sprites['rightfar']
+
+class Bullet (GameEntity):
+    def __init__(self,pos):
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'bullet.png')), 1, 1, 0 , 3)
+
+
+
 def start_game():
     global starttime
     starttime = (pygame.time.get_ticks())
@@ -1183,7 +1232,7 @@ def main_menu():
 
 if __name__ == "__main__":
 
-    '''
+    
     start_game()
     '''
     
