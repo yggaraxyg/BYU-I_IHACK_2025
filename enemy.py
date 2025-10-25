@@ -1,31 +1,3 @@
-'''
-Enemy classes for the game
-Functions:
-- Enemy: Base enemy class
-- BasicEnemy: Simple enemy that moves towards player
-- create_random_enemy: Factory function to create a random enemy type
-'''
-
-import pygame
-import os
-import random
-from playerclasses import player
-
-class Enemy(player):
-    '''Base enemy class'''
-    def __init__(self, cordx, cordy, maxhp, hp, score, speed=1, image_path='data/sprites/enemy.png', container=None):
-        super().__init__(cordx, cordy, maxhp, hp, score, container = None)
-        self.image = pygame.image.load(image_path)
-        self.rect = self.image.get_rect(center=(cordx, cordy))
-        self.pos = pygame.Vector2(cordx, cordy)
-        self.health = hp
-        self.max_health = maxhp
-        self.speed = speed
-        self.alive = True
-
-    def update(self, player_pos):
-        # Gets overridden in subclasses for different enemies
-        pass
     
     def move_towards_player(self, player_x, player_y):
         # Basic movement towards player
