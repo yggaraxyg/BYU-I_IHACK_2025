@@ -12,6 +12,8 @@ from questionbackend import *
 
 question_list = []
 file_path = "data/questions/easy_mode.csv" # Default CSV file path
+wincondition = 0
+winquantity = 10 
 
 class World:
     def __init__(self):
@@ -44,12 +46,8 @@ class World:
         self.collectable_sprites = pygame.sprite.Group()
         self.player = Player(pygame.Vector2(60,60))
         self.turtle = Turtle(pygame.Vector2(20, 20))
-        self.treasure = Treasure(pygame.Vector2(200,40), 100)
-        self.heart = Heart(pygame.Vector2(200,80), 5)
         self.player_sprite.add(self.player)
         self.enemy_sprites.add(self.turtle)
-        self.collectable_sprites.add(self.treasure)
-        self.collectable_sprites.add(self.heart)
         self.last_hit_time = 0
         self.map = pytmx.load_pygame(os.path.join('data', 'maps', 'map1.tmx'))
         self.map_pwidth = self.map.width * 16
@@ -67,12 +65,12 @@ class World:
     def on_loop(self):
         self.get_input()
 
-            self.player_update()
-            self.camera()
-      
-            self.enemies_update()
+        self.player_update()
+        self.camera()
         
-            self.sprite_update()
+        self.enemies_update()
+        
+        self.sprite_update()
         
         self.weapon_update()
         self.kill()
@@ -517,7 +515,7 @@ class Heart(GameEntity):
 
 class Salamander(GameEntity):
     def __init__(self, pos):
-        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'salamander.png')), 10, 10, 40 , 0.20)        
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'salamander.png')), 10, 10, 20 , 0.20)        
 
 class Eyeball(GameEntity):
     def __init__(self, pos):
@@ -525,7 +523,7 @@ class Eyeball(GameEntity):
 
 class Ogre(GameEntity):
     def __init__(self, pos):
-        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'ogre.png')), 100, 100, 1000 , 0.05)
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'ogre.png')), 100, 100, 100 , 0.05)
         
 def start_game():
     world = World()
@@ -562,12 +560,13 @@ def create_questions_menu():
 
     csv_submenu = create_csv_menu()
     manual_submenu = create_manual_menu()
+    wincondition =  win_conditions_menu()
 
     question_menu.add.button("Manual Input", manual_submenu, font_size=15)
     question_menu.add.button("Choose Default CSV", csv_submenu, font_size=15)
     question_menu.add.button("Load User CSV", user_csv, font_size=15)
     question_menu.add.button("test csv", lambda: print(question_list), font_size=15)
-
+    question_menu.add.button("Change Win Condition", wincondition,font_size=15)
     return question_menu
 
 def create_csv_menu():
@@ -635,7 +634,35 @@ def create_manual_menu():
 
     return manual_menu
 
+def win_conditions_menu():
 
+    global wincondition
+    global winquantity
+    theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
+                                     title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
+    
+    win_condition = pygame_menu.Menu('Win Condtion:', 320, 240, theme=theme)
+
+    def handle_manual_input():
+        try:
+            winquantity = int(box.get_value())
+        except:
+            pass
+
+    box = win_condition.add.text_input("Quantity:", default="10", font_size=12)
+    win_condition.add.button("Change Quanity:", handle_manual_input, font_size=12)
+    win_condition.add.button("Correct", lambda:set_wincondition(1), font_size=12)
+    win_condition.add.button("Score", lambda:set_wincondition(2), font_size=12)
+    win_condition.add.button("Time", lambda:set_wincondition(3), font_size=12)
+    win_condition.add.button("Answered", lambda:set_wincondition(4), font_size=12)
+    win_condition.add.button("Endless.", lambda:set_wincondition(0), font_size=12)
+    return win_condition
+
+
+def set_wincondition(numb):
+    global wincondition
+    wincondition=numb
+    
 def main_menu():
     theme = pygame_menu.Theme(background_color=(0, 0, 0, 0), title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
     
@@ -646,7 +673,7 @@ def main_menu():
     logo_image = os.path.join('data', 'sprites', 'logo.png')
     play_button_image = os.path.join('data', 'sprites', 'play_button.png')
     questions_button_image = os.path.join('data', 'sprites', 'questions_button.png')
-
+    
     menu.add.image(logo_image)
     menu.add.vertical_margin(20)
     menu.add.banner(pygame_menu.BaseImage(image_path=play_button_image), start_game)
@@ -657,7 +684,7 @@ def main_menu():
 
 if __name__ == "__main__":
 
-    
+    '''
     start_game()
     '''
     
@@ -666,11 +693,15 @@ if __name__ == "__main__":
 
     menu = main_menu()
 
+    print(wincondition)
+    print(winquantity)
     try:
         menu.mainloop(screen)
     except Exception as e:
         pass
     finally:
+        print(wincondition)
+        print(winquantity)
         pygame.quit()
         sys.exit()
     #'''
