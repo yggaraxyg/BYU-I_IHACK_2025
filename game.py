@@ -90,7 +90,8 @@ class World:
 
     def player_update(self):
         self.player.pos = self.player.pos + self.player.velocity
-        self.player_sprite.update(self.player.pos - self.camera_pos)
+        self.player_relative = self.player.pos - self.camera_pos
+        self.player_sprite.update(self.player_relative)
         self.collision_check()
 
     
