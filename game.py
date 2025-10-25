@@ -61,6 +61,8 @@ class World:
         self.map_pwidth = self.map.width * 16
         self.map_pheight = self.map.height * 16
         self.collisionmap()
+        self.weapon_sprites = pygame.sprite.Group()
+        self.attack_cooldown = 0
     def on_event(self, event):
         if event.type == pygame.QUIT:
             self._running = False
@@ -75,7 +77,7 @@ class World:
         self.camera()
         self.enemies_update()
         self.sprite_update()
-        
+        self.weapon_update()
         self.kill()
         self.dt = self.clock.tick(60)
         pass
@@ -94,6 +96,7 @@ class World:
         self.player_sprite.draw(self._screen)
         self.enemy_sprites.draw(self._screen)
         self.collectable_sprites.draw(self._screen)
+        self.weapon_sprites.draw(self._screen)  # Add this line
         pygame.display.flip()
 
     def on_cleanup(self):
@@ -225,6 +228,10 @@ class World:
         self.player.velocity = pygame.Vector2(0,0)
         prev_facing = self.player.facing
         self.player.facing = pygame.Vector2(0,0)
+        
+        if self.attack_cooldown > 0:
+            self.attack_cooldown -= self.dt
+        
         if self.keys[pygame.K_LSHIFT]:
             self.speedmult=2
         else:
@@ -241,8 +248,72 @@ class World:
         if self.keys[pygame.K_d]:
             self.player.velocity.x += self.player.speed * self.dt * self.speedmult
             self.player.facing.x = 1
+        
+        if self.attack_cooldown <= 0:
+            if self.keys[pygame.K_UP]:
+                self.attack('up')
+                self.attack_cooldown = 300
+            elif self.keys[pygame.K_DOWN]:
+                self.attack('down')
+                self.attack_cooldown = 300
+            elif self.keys[pygame.K_LEFT]:
+                self.attack('left')
+                self.attack_cooldown = 300
+            elif self.keys[pygame.K_RIGHT]:
+                self.attack('right')
+                self.attack_cooldown = 300
+        
         if self.player.facing == pygame.Vector2(0,0):
             self.player.facing = prev_facing
+
+    def attack(self, direction):
+        self.weapon_sprites.empty()
+        
+        sword_offset = 20
+        match direction:
+            case 'up':
+                sword_pos = self.player.pos + pygame.Vector2(0, -sword_offset)
+                rotation = 0
+            case 'down':
+                sword_pos = self.player.pos + pygame.Vector2(0, sword_offset)
+                rotation = 180
+            case 'left':
+                sword_pos = self.player.pos + pygame.Vector2(-sword_offset, 0)
+                rotation = 90
+            case 'right':
+                sword_pos = self.player.pos + pygame.Vector2(sword_offset, 0)
+                rotation = 270
+        
+        sword = Weapon(sword_pos, rotation)
+        self.weapon_sprites.add(sword)
+        self.check_weapon_collision()
+
+    def weapon_update(self):
+        for weapon in self.weapon_sprites:
+            weapon_relative = weapon.pos - self.camera_pos
+            weapon.update(weapon_relative)
+
+    def check_weapon_collision(self):
+        for weapon in self.weapon_sprites:
+            hit_enemies = pygame.sprite.spritecollide(weapon, self.enemy_sprites, False)
+            for enemy in hit_enemies:
+                print(f"Hit {enemy.__class__.__name__}!")
+                enemy.hurt(5)
+                if enemy.hp <= 0:
+                    self.player.score += enemy.score
+                    enemy.die()
+        
+        pygame.time.set_timer(pygame.USEREVENT + 1, 150)
+
+    def on_event(self, event):
+        if event.type == pygame.QUIT:
+            self._running = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_t:
+                self.show_question_popup()
+        if event.type == pygame.USEREVENT + 1:
+            self.weapon_sprites.empty()
+            pygame.time.set_timer(pygame.USEREVENT + 1, 0)
 
     def collisionmap(self):
             self.collision_tiles = []
@@ -373,6 +444,16 @@ class GameEntity(pygame.sprite.Sprite):
 class Player(GameEntity):
     def __init__(self, pos):
         super().__init__(pos, pygame.image.load(os.path.join('data', 'sprites', 'player.png')), 10, 10, 0, 0.1)
+    
+    def update(self, pos):
+        self.rect = self.image.get_rect(center = pos)
+
+class Weapon(GameEntity):
+    def __init__(self, pos, rotation=0):
+        sprite_image = pygame.image.load(os.path.join('data', 'sprites', 'sword.png'))
+        rotated_image = pygame.transform.rotate(sprite_image, rotation)
+        super().__init__(pos, rotated_image, 1, 1, 0, 0)
+        self.rotation = rotation
     
     def update(self, pos):
         self.rect = self.image.get_rect(center = pos)
