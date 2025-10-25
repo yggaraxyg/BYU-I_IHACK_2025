@@ -58,6 +58,7 @@ class World:
         self.map = pytmx.load_pygame(os.path.join('data', 'maps', 'map1.tmx'))
         self.map_pwidth = self.map.width * 16
         self.map_pheight = self.map.height * 16
+        self.cameralock = pygame.Vector2(1,1)
         self.collisionmap()
     def on_event(self, event):
         if event.type == pygame.QUIT:
@@ -69,10 +70,13 @@ class World:
     def on_loop(self):
         self.get_input()
 
+
         self.player_update()
-        self.camera()
+      
         self.enemies_update()
+        
         self.sprite_update()
+        self.camera()
         
         self.kill()
         self.dt = self.clock.tick(60)
@@ -82,7 +86,9 @@ class World:
         self._screen.fill((0,0,0))
         for row in range(self.map.width):
             for column in range (self.map.height):
-                self.mapdisplay = pygame.Vector2(row * 16, column * 16) - self.camera_pos
+                offsetx = -256
+                offsety = -256
+                self.mapdisplay = pygame.Vector2(row * 16 + offsetx, column * 16 + offsety) - self.camera_pos
                 try:
                     tile = self.map.get_tile_image(row, column, 0)
                 except:
@@ -118,7 +124,7 @@ class World:
     def enemies_update(self):
     
         for enemy in self.enemy_sprites:
-            enemy.camview(self.player.velocity, self.cameralock)
+            screen.blit (sprite.image, (sprite.rect.x - camera_offset))
           
             enemy.move_towards(self.player_relative)
 
@@ -465,7 +471,6 @@ def create_manual_menu():
 
 if __name__ == "__main__":
 
-    '''
     start_game()
     '''
     
@@ -496,3 +501,4 @@ if __name__ == "__main__":
     finally:
         pygame.quit()
         sys.exit()
+    '''
