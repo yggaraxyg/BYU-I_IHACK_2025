@@ -158,8 +158,6 @@ class World:
 #                    self.player.rect.top = tile_rect.bottom
 #                self.player.velocity.y = 0
         
-    
->>>>>>> refs/remotes/origin/main
     def kill(self):
         if self.player.hp <= 0:
             self.player.kill()
@@ -406,7 +404,8 @@ def create_manual_menu():
     return manual_menu
 
 if __name__ == "__main__":
-    
+
+    '''
     start_game()
     '''
     
