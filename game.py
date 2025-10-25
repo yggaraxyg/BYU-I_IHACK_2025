@@ -1246,7 +1246,7 @@ if __name__ == "__main__":
 
     
     start_game()
-    '''
+    
     
     pygame.init()
     screen = pygame.display.set_mode((320, 240), pygame.RESIZABLE | pygame.SCALED)
