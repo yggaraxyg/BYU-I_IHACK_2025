@@ -9,6 +9,7 @@ from pytmx.util_pygame import load_pygame
 import tkinter
 from tkinter import filedialog
 from questionbackend import *
+import math
 
 question_list = []
 file_path = "data/questions/easy_mode.csv" # Default CSV file path
@@ -52,8 +53,10 @@ class World:
         self.collectable_sprites = pygame.sprite.Group()
         self.player = Player(pygame.Vector2(60,60))
         self.turtle = Turtle(pygame.Vector2(20, 20))
+        self.dragon = Dragon(pygame.Vector2(608, 1049))
         self.player_sprite.add(self.player)
         self.enemy_sprites.add(self.turtle)
+        self.enemy_sprites.add(self.dragon)
         self.last_hit_time = 0
         self.map = pytmx.load_pygame(os.path.join('data', 'maps', 'map1.tmx'))
         self.map_pwidth = self.map.width * 16
@@ -138,12 +141,14 @@ class World:
         self.player_sprite.update(self.player_relative)
         self.player.update_rect(self.camera_pos)
         self.collision_check()
+        print(self.player.pos)
 
     
     def enemies_update(self):
         for enemy in self.enemy_sprites:
             enemy.move_towards(self.player.pos)
             enemy.update_rect(self.camera_pos)
+        self.dragon.updatepic(self.player.pos, self.enemy_sprites)
 
     def spawn_random(self):
         etypes = [Salamander, Salamander, Salamander, Salamander, Salamander, Eyeball, Eyeball, Eyeball, Eyeball, Eyeball, Ogre]
@@ -186,9 +191,13 @@ class World:
             if sprite_collision:
                 for enemy in self.enemy_sprites:
                     if pygame.sprite.collide_rect(enemy, self.player):
-                        
+                            
                         self.knockbackdir = self.player.pos - enemy.pos
                         #print (str(knockbackdir))
+                        if(type(enemy)==Bullet):
+                            enemy.die()
+                            del(enemy)
+                        
                         
                 #print(type(sprite_collision[0]))
                 self.last_hit_time = current_time
@@ -586,7 +595,32 @@ class Eyeball(GameEntity):
 class Ogre(GameEntity):
     def __init__(self, pos):
         super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'ogre.png')), 100, 100, 100 , 0.05)
+
+class Dragon(GameEntity):
+    def __init__(self, pos):
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'Dragon.png')), 500, 500, 10000 , 0)
+        self.image_far= pygame.image.load(os.path.join('data', 'sprites', 'Dragon.png'))
+        self.image_near= pygame.image.load(os.path.join('data', 'sprites', 'DragonOpen.png'))
+        self.last_spawn = 0
         
+    def updatepic(self, pos, group):
+        dist = (self.pos.x - pos.x, self.pos.y - pos.y)
+        far = math.hypot(*dist)
+        print(far)
+        if (far<=100):
+            self.image = self.image_near
+            if ((pygame.time.get_ticks()-self.last_spawn)>10000):
+                self.last_spawn = pygame.time.get_ticks()
+                for i in range(5):
+                    glob = Bullet(pygame.Vector2(self.pos.x+random.randint(-25, 25),self.pos.y+random.randint(-25, 25)))
+                    group.add(glob)
+        else:
+            self.image = self.image_far
+
+class Bullet (GameEntity):
+    def __init__(self,pos):
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'bullet.png')), 1, 1, 0 , 3)
+
 def start_game():
     global starttime
     starttime = (pygame.time.get_ticks())
@@ -774,7 +808,7 @@ def main_menu():
 
 if __name__ == "__main__":
 
-    '''
+    
     start_game()
     '''
     
