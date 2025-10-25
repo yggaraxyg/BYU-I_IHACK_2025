@@ -619,8 +619,7 @@ def create_manual_menu():
                                      title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
     
     manual_menu = pygame_menu.Menu('Manual Input', 320, 240, theme=theme)
-    global question_list
-    question_list = []  # Clear existing questions
+    
     question_input = manual_menu.add.text_input("Question: ", default="", font_size=11)
     answer_input = manual_menu.add.text_input("Correct Answer: ", default="", font_size=11)
     
@@ -633,22 +632,16 @@ def create_manual_menu():
         wrong3_text = wrong3_input.get_value()
         
         if question_text and answer_text and wrong1_text and wrong2_text and wrong3_text:
-            question_box = questionbox()
-            question_box.addQuestion(question_text, answer_text, wrong1_text, wrong2_text, wrong3_text)
-            question_list.append(question_box.questionlist)
+            question_list.append([question_text, answer_text, wrong1_text, wrong2_text, wrong3_text])
             print(f"Added question: {question_text} -> {answer_text} with wrong answers: {wrong1_text}, {wrong2_text}, {wrong3_text}")
-            # Clear inputs
             question_input.set_value("")
             answer_input.set_value("")
             wrong1_input.set_value("")
             wrong2_input.set_value("")
             wrong3_input.set_value("")
         elif question_text and answer_text:
-            question_box = questionbox()
-            question_box.addQuestion(question_text, answer_text)
-            question_list.append(question_box.questionlist)
+            question_list.append([question_text, answer_text])
             print(f"Added question: {question_text} -> {answer_text}")
-            # Clear inputs
             question_input.set_value("")
             answer_input.set_value("")
             wrong1_input.set_value("")
@@ -658,12 +651,25 @@ def create_manual_menu():
             print("Please enter both question and answer")
     
     manual_menu.add.button("Add Question", handle_manual_input, font_size=12)
-    manual_menu.add.label("Optional:", font_size=10)
     wrong1_input = manual_menu.add.text_input("Wrong Answer 1: ", default="", font_size=11)
     wrong2_input = manual_menu.add.text_input("Wrong Answer 2: ", default="", font_size=11)
     wrong3_input = manual_menu.add.text_input("Wrong Answer 3: ", default="", font_size=11)
+    manual_menu.add.button("Save File", save_manual_questions, font_size=12)
 
     return manual_menu
+
+def save_manual_questions():
+    global question_list
+    root = tkinter.Tk()
+    root.withdraw()
+    file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
+    if file_path:
+        from csv_unparser import save_to_csv
+        save_to_csv(file_path, question_list)
+        print(f"Saved {len(question_list)} questions to {file_path}")
+    else:
+        print("Save operation cancelled.")
+    root.destroy()
 
 def pause_menu():
     theme = pygame_menu.Theme(background_color=(50, 50, 50, 200),
