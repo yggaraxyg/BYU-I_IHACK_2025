@@ -568,19 +568,6 @@ class World:
         if self.attack_cooldown > 0:
             self.attack_cooldown -= self.dt
         
-        # Debug toggles
-        if self.keys[pygame.K_c] and not getattr(self, 'c_pressed', False):
-            self.show_collision_debug = not getattr(self, 'show_collision_debug', False)
-            self.c_pressed = True
-        elif not self.keys[pygame.K_c]:
-            self.c_pressed = False
-            
-        if self.keys[pygame.K_p] and not getattr(self, 'p_pressed', False):
-            self.show_path_debug = not getattr(self, 'show_path_debug', False)
-            self.p_pressed = True
-        elif not self.keys[pygame.K_p]:
-            self.p_pressed = False
-        
         if self.keys[pygame.K_LSHIFT]:
             self.speedmult=2
         else:
