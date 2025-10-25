@@ -87,8 +87,9 @@ def find_path_with_library(start_pos, goal_pos, collision_map, map_width, map_he
 question_list = []
 file_path = "data/questions/easy_mode.csv" # Default CSV file path
 wincondition = 0
-winquantity = 10 
-starttime =0
+winquantity = 10
+starttime = 0
+help_cooldown = 100000
 
 class World:
     def __init__(self):
@@ -185,6 +186,7 @@ class World:
         self.cached_pathfinding_grid = create_pathfinding_grid(self.collision_grid, self.map.width, self.map.height)
     
     def on_loop(self):
+        global help_cooldown
         self.get_input()
         self.player_update()
         self.camera()
@@ -193,6 +195,7 @@ class World:
         self.weapon_update()
         self.kill()
         self.dt = self.clock.tick(60)
+        help_cooldown -= self.dt
 
         # Optimize enemy management for performance
         MAX_ENEMIES = 20  # Reduced from 20
@@ -611,6 +614,14 @@ class World:
             self.player.facing.x = 1
             self.last_moved= pygame.time.get_ticks()
 
+        if self.keys[pygame.K_h]:
+            global help_cooldown
+            if help_cooldown <= 0:
+                help_cooldown = 50000
+                shortdelay=pygame.time.get_ticks()
+                self.helper_guy()
+                starttime+=(pygame.time.get_ticks()-shortdelay)
+
         if self.keys[pygame.K_ESCAPE]:
             shortdelay=pygame.time.get_ticks()
             pause = pause_menu()
@@ -694,6 +705,34 @@ class World:
                     for obj in layer:
                         self.collision_tiles.append(pygame.Rect(obj.x, obj.y, obj.width, obj.height))
     
+    def helper_guy(self):
+        theme = pygame_menu.Theme(
+            background_color=(50, 50, 50, 200),
+            title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE
+        )
+
+        help_menu = pygame_menu.Menu('', 320, 240, theme=theme)
+        help_menu.add.label("Need help? Here's an answer to a question:", font_size=15, font_color=(255, 255, 0))
+        # Display a random question from the question list with its answer
+        global question_list
+        if question_list:
+            random_question = random.choice(question_list)
+            question_text = random_question[0]
+            correct_answer_text = random_question[1]
+            help_menu.add.label(f"Q: {question_text}", font_size=12, max_char=40, font_color=(255, 255, 255))
+            help_menu.add.vertical_margin(5)
+            help_menu.add.label(f"A: {correct_answer_text}", font_size=12, max_char=40, font_color=(0, 255, 0))
+        else:
+            help_menu.add.label("No questions available.", font_size=12)
+        help_menu.add.button("Heal me up", lambda: self.player.heal(10), font_size=15)
+        help_menu.add.vertical_margin(10)
+        help_menu.add.button("Continue", lambda: exit_menu(help_menu), font_size=15)
+
+        try:
+            help_menu.mainloop(self._screen)
+        except Exception as e:
+            pass
+
     def show_question_popup(self):
         global question_list
         
@@ -1248,7 +1287,7 @@ def main_menu():
 if __name__ == "__main__":
 
 
-    start_game()
+    start_game() # Remove this line before turning in
     
     
     pygame.init()
