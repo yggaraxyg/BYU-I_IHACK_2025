@@ -149,8 +149,10 @@ class World:
         self.weapon_sprites = pygame.sprite.Group()
         self.attack_cooldown = 0
         self.correct=0
-        self.answers=0;
+        self.answers=0
         self.knockbackdir = pygame.Vector2(0,0)
+        self.MAX_ENEMIES = 20
+        self.newmap=False
         
         # Performance optimization variables
         self.pathfinding_frame_counter = 0
@@ -198,7 +200,6 @@ class World:
         help_cooldown -= self.dt
 
         # Optimize enemy management for performance
-        MAX_ENEMIES = 20  # Reduced from 20
         current_enemy_count = len(self.enemy_sprites)
 
         if current_enemy_count < MAX_ENEMIES:
@@ -374,12 +375,13 @@ class World:
     def spawn_random(self):
         """Spawn an enemy in a random walkable location"""
         etypes = [Salamander, Salamander, Salamander, Salamander, Salamander, Eyeball, Eyeball, Eyeball, Eyeball, Eyeball, Ogre]
+
+        if(self.newmap==False):
+            # Find a valid spawn position (not in a wall and not too close to player)
+            max_attempts = 50  # Reduced from 100 for better performance
+            min_distance_from_player = 80  # Increased minimum distance
         
-        # Find a valid spawn position (not in a wall and not too close to player)
-        max_attempts = 50  # Reduced from 100 for better performance
-        min_distance_from_player = 80  # Increased minimum distance
-        
-        for attempt in range(max_attempts):
+            for attempt in range(max_attempts):
             # Generate random position in world coordinates (with safety margins)
             spawn_x = random.randint(32, max(32, (self.map.width - 2) * 16))
             spawn_y = random.randint(32, max(32, (self.map.height - 2) * 16))
@@ -402,10 +404,20 @@ class World:
                 self.spawn = enemy_type(spawn_pos)
                 self.enemy_sprites.add(self.spawn)
                 return
-        
-        # If we couldn't find a valid position after max_attempts, 
-        # fall back to spawning near the player (but still not in walls)
-        self.spawn_near_player_safe(etypes)
+            
+            # If we couldn't find a valid position after max_attempts, 
+            # fall back to spawning near the player (but still not in walls)
+            self.spawn_near_player_safe(etypes)
+        else:
+            line =randint(1,3)
+            enemy_type = random.choice(etypes)
+            if(line==1):
+                self.spawn = enemy_type(pygame.vector2(150,random.randint(200,900)))
+            if(line==2):
+                self.spawn = enemy_type(pygame.vector2(700,random.randint(200,900)))
+            if(line==3):
+                self.spawn = enemy_type(pygame.vector2(random.randint(150,700),200))
+            self.enemy_sprites.add(self.spawn)
     
     def spawn_near_player_safe(self, etypes):
         """Fallback: spawn enemy near player but in a safe location"""
@@ -560,8 +572,8 @@ class World:
         game_over_menu = pygame_menu.Menu('', 320, 240, theme=theme)
         game_over_menu.add.label(message, font_size=20, font_color=(255, 0, 0))
         game_over_menu.add.vertical_margin(10)
-#        if(message=="YOU WIN!"):
-#            game_over_menu.add.button("Continue")
+        if(message=="YOU WIN!"):
+            game_over_menu.add.button("Continue" self.swap_map, font_size=15)
         game_over_menu.add.button("Restart", self.restart_game, font_size=15)
         game_over_menu.add.button("Main Menu", self.return_to_main_menu, font_size=15)
         game_over_menu.add.button("Quit", pygame_menu.events.EXIT, font_size=15)
@@ -808,6 +820,27 @@ class World:
         feedback_menu.add.button("Continue", lambda: exit_menu(feedback_menu), font_size=15)
         
         feedback_menu.mainloop(self._screen)
+
+    def swap_map(self):
+        global starttime
+        self.map = pytmx.load_pygame(os.path.join('data', 'maps', 'map2.tmx'))
+        self.map_pwidth = self.map.width * 16
+        self.map_pheight = self.map.height * 16
+        for enemy in self.enemy_sprites:
+            kill(enemy)
+            del(enemy)
+        for collectible in self.collectible_sprites:
+            kill(collectible)
+            del(collectible)
+        self.player.pos = pygame.Vector2(60,60)
+        starttime= pygame.time.get_ticks()
+        self.player.score = 0
+        self.player.hp = self.player.maxhp
+        self.correct=0
+        self.answers=0
+        self.newmap=True
+        self.MAX_ENEMIES = 5
+        pass.
 
 
 class GameEntity(pygame.sprite.Sprite):
