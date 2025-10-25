@@ -1,21 +1,21 @@
 question,answer
 "What is the slope of the line passing through points (2, 3) and (5, 9)?",2
 "Solve for x: 3x + 7 = 22",5
-"What is the vertex of the parabola y = x² - 4x + 3?","(2, -1)"
-"Factor completely: x² - 9","(x + 3)(x - 3)"
-"Solve the quadratic equation: x² - 5x + 6 = 0","x = 2, x = 3"
+"What is the vertex of the parabola y = x^2 - 4x + 3?","(2, -1)"
+"Factor completely: x^2 - 9","(x + 3)(x - 3)"
+"Solve the quadratic equation: x^2 - 5x + 6 = 0","x = 2, x = 3"
 "What is the domain of f(x) = 1/(x - 4)?","All real numbers except x = 4"
-"Simplify: (2x³y²)/(4xy)","x²y/2"
+"Simplify: (2x^3*y^2)/(4xy)","x^2*y/2"
 "Find the x-intercept of the line 2x + 3y = 12","(6, 0)"
-"What is log₂(8)?",3
+"What is log_2(8)?",3
 "Solve for y: 2y - 3x = 8","y = (3x + 8)/2"
-"What is the inverse of f(x) = 3x - 2?","f⁻¹(x) = (x + 2)/3"
-"Evaluate: (-3)²",9
+"What is the inverse of f(x) = 3x - 2?","f^(-1)(x) = (x + 2)/3"
+"Evaluate: (-3)^2",9
 "What is the distance between points (-1, 2) and (3, 5)?",5
 "Solve the system: x + y = 5, 2x - y = 1","x = 2, y = 3"
 "What is the y-intercept of y = -2x + 7?","(0, 7)"
-"Factor: 2x² + 7x + 3","(2x + 1)(x + 3)"
+"Factor: 2x^2 + 7x + 3","(2x + 1)(x + 3)"
 "What is the equation of a line with slope 3 passing through (1, 4)?","y = 3x + 1"
-"Simplify: √(16x⁴)","4x²"
-"What is the range of f(x) = x² + 1?","[1, ∞)"
+"Simplify: sqrt(16x^4)","4x^2"
+"What is the range of f(x) = x^2 + 1?","[1, infinity)"
 "Solve for x: |2x - 3| = 7","x = 5 or x = -2"

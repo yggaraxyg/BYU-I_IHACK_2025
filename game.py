@@ -1,6 +1,7 @@
 import pygame
 from pygame.locals import *
 import os
+import sys
 import random
 import pygame_menu
 import pytmx
@@ -27,18 +28,32 @@ class World:
         self.setup()
 
     def setup(self):
+        global question_list
+        if not question_list:
+            try:
+                question_box = questionbox()
+                question_box.getFromCSV(file_path)
+                question_list.extend(question_box.questionlist)
+                print(f"Loaded {len(question_box.questionlist)} default questions")
+            except Exception as e:
+                print(f"Could not load default questions: {e}")
+        
         self.camera_pos = pygame.Vector2(-0.5 * self.width,-0.5 * self.height)
         self.player_sprite = pygame.sprite.GroupSingle()
         self.enemy_sprites = pygame.sprite.Group()
         self.collectable_sprites = pygame.sprite.Group()
         self.player = Player(pygame.Vector2(60,60))
         self.turtle = Turtle(pygame.Vector2(20, 20))
-        self.salamander = Salamander(pygame.Vector2(100,100))
-        self.eyeball = Eyeball(pygame.Vector2(300,300))
-        self.ogre = Ogre(pygame.Vector2(200,200))
+        #self.salamander = Salamander(pygame.Vector2(100,100))
+        self.eyeball = Eyeball(pygame.Vector2(40,200))
+        #self.ogre = Ogre(pygame.Vector2(200,200))
+        self.treasure = Treasure(pygame.Vector2(200,40), 100)
         self.player_sprite.add(self.player)
         self.enemy_sprites.add(self.turtle)
-        self.enemy_sprites.add(self.salamander)
+        #self.enemy_sprites.add(self.salamander)
+        self.enemy_sprites.add(self.eyeball)
+        #self.enemy_sprites.add(self.ogre)
+        self.collectable_sprites.add(self.treasure)
         self.last_hit_time = 0
         self.map = pytmx.load_pygame(os.path.join('data', 'maps', 'map1.tmx'))
         self.map_pwidth = self.map.width * 16
@@ -47,6 +62,9 @@ class World:
     def on_event(self, event):
         if event.type == pygame.QUIT:
             self._running = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_t:
+                self.show_question_popup()
 
     def on_loop(self):
         self.get_input()
@@ -73,10 +91,12 @@ class World:
                     self._screen.blit(tile, self.mapdisplay)
         self.player_sprite.draw(self._screen)
         self.enemy_sprites.draw(self._screen)
+        self.collectable_sprites.draw(self._screen)
         pygame.display.flip()
 
     def on_cleanup(self):
         pygame.quit()
+        sys.exit()
 
     def on_execute(self):
         if self.on_init() == False:
@@ -133,7 +153,11 @@ class World:
                 self.player.pos -= self.player.facing * 2
         else:
             self.player.pos -= self.player.facing * 2
-        sprite_collision = pygame.sprite.spritecollide(self.player, self.collectable_sprites, False)
+        for col in self.collectable_sprites:
+            sprite_collision = pygame.sprite.spritecollide(col, self.player_sprite, False)
+            if sprite_collision:
+                self.player.score+=col.score
+                col.die()
         self.player.pos.x += self.player.velocity.x
         for tile_rect in self.collision_tiles:
             if self.player.rect.colliderect(tile_rect):
@@ -151,7 +175,6 @@ class World:
                     self.player.rect.top = tile_rect.bottom
                 self.player.velocity.y = 0
         
-    
     def kill(self):
         if self.player.hp <= 0:
             self.player.kill()
@@ -181,12 +204,57 @@ class World:
             self.player.facing = prev_facing
 
     def collisionmap(self):
-        self.collision_tiles = []
-        for layer in self.map.visible_layers:
-            if isinstance(layer, pytmx.TiledObjectGroup) and layer.name == "Collision Layer":
-                for obj in layer:
-                    self.collision_tiles.append(pygame.Rect(obj.x, obj.y, obj.width, obj.height))
+            self.collision_tiles = []
+            for layer in self.map.visible_layers:
+                if isinstance(layer, pytmx.TiledObjectGroup) and layer.name == "Collision Layer":
+                    for obj in layer:
+                        self.collision_tiles.append(pygame.Rect(obj.x, obj.y, obj.width, obj.height))
+    
+    def show_question_popup(self):
+        global question_list
+        
+        if not question_list:
+            print("No questions available.")
+            return
+        
+        question_box = questionbox()
+        question_box.questionlist = question_list
+        question_set = question_box.getQuestion()
+        
+        question_text = question_set[0]
+        answer1 = question_set[1]
+        answer2 = question_set[2]
+        answer3 = question_set[3]
+        answer4 = question_set[4]
+        correct_answer_index = question_set[5]
+        
+        question_theme = pygame_menu.Theme(
+            background_color=(50, 50, 50, 200),
+            title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE
+        )
 
+        self.question_menu = pygame_menu.Menu('', 280, 180, theme=question_theme)
+        
+        self.question_menu.add.label(question_text, max_char=30, font_size=11, font_color=(255, 255, 255), align=pygame_menu.locals.ALIGN_CENTER)
+        self.question_menu.add.vertical_margin(10)
+        self.question_menu.add.button(f"A) {answer1}", lambda: self.answer_question(0, correct_answer_index, self.question_menu), font_size=10)
+        self.question_menu.add.button(f"B) {answer2}", lambda: self.answer_question(1, correct_answer_index, self.question_menu), font_size=10)
+        self.question_menu.add.button(f"C) {answer3}", lambda: self.answer_question(2, correct_answer_index, self.question_menu), font_size=10)
+        self.question_menu.add.button(f"D) {answer4}", lambda: self.answer_question(3, correct_answer_index, self.question_menu), font_size=10)
+        
+        # Show the menu
+        self.question_menu.mainloop(self._screen)
+
+    def answer_question(self, selected_answer, correct_answer, menu):
+        if selected_answer == correct_answer:
+            print("correct")
+            # Eventually give player loot they picked up; for now just heal 1 HP
+            self.player.hpmod(1)
+        else:
+            print("wrong")
+            
+        menu.disable()
+        menu._close()
 
 
 class GameEntity(pygame.sprite.Sprite):
@@ -247,7 +315,7 @@ class GameEntity(pygame.sprite.Sprite):
         self.pos.y -= (cam.y * lock.y)
 
     def die(self):
-        self.kill
+        self.kill()
 
     def move_towards(self, pos):
         direction = pos-self.pos
@@ -340,8 +408,7 @@ def create_csv_menu():
     csv_menu.add.button("Easy Mode", lambda: select_csv("data/questions/easy_mode.csv"), font_size=15)
     csv_menu.add.button("English", lambda: select_csv("data/questions/english.csv"), font_size=15)
     csv_menu.add.button("Geography", lambda: select_csv("data/questions/geography.csv"), font_size=15)
-    '''csv_menu.add.button("Math", lambda: select_csv("data/questions/math.csv"), font_size=15)
-    This one is broken because math.csv uses characters that break the parser'''
+    csv_menu.add.button("Math", lambda: select_csv("data/questions/math.csv"), font_size=15)
     csv_menu.add.button("Psych", lambda: select_csv("data/questions/psych.csv"), font_size=15)
 
     return csv_menu
@@ -397,6 +464,7 @@ def create_manual_menu():
     return manual_menu
 
 if __name__ == "__main__":
+
     '''
     start_game()
     '''
@@ -421,4 +489,10 @@ if __name__ == "__main__":
     menu.add.vertical_margin(10)
     menu.add.banner(pygame_menu.BaseImage(image_path=questions_button_image), questions_submenu)
 
-    menu.mainloop(screen)
+    try:
+        menu.mainloop(screen)
+    except Exception as e:
+        pass
+    finally:
+        pygame.quit()
+        sys.exit()
