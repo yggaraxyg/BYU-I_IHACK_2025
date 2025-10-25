@@ -20,13 +20,8 @@ class World:
 
     def on_init(self):
         pygame.init()
-        self._flags =0
-        #self._flags = pygame.RESIZABLE
-        #self._flags = pygame.SCALED
         self._flags = pygame.RESIZABLE | pygame.SCALED
         self._screen = pygame.display.set_mode(self.size, self._flags)
-        #self._screen = pygame.display.set_mode(self.size)
-        #self._screen = pygame.display.set_mode((320, 240), pygame.RESIZABLE )
         self.clock = pygame.time.Clock()
         self.dt = 0
         self.setup()
@@ -253,7 +248,7 @@ class Eyeball(GameEntity):
     def __init__(self, pos):
         super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'florb.png')), 50, 50, 40 , 0)
 
-class Orgre(GameEntity):
+class Ogre(GameEntity):
     def __init__(self, pos):
         super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'ogre.png')), 400, 400, 1000 , 0.05)
         
@@ -312,7 +307,10 @@ def create_csv_menu():
     return csv_menu
 
 if __name__ == "__main__":
-
+    '''
+    start_game()
+    '''
+    
     pygame.init()
     screen = pygame.display.set_mode((320, 240), pygame.RESIZABLE | pygame.SCALED)
 
