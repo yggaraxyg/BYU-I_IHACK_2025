@@ -195,12 +195,12 @@ class World:
         self.dt = self.clock.tick(60)
 
         # Optimize enemy management for performance
-        MAX_ENEMIES = 12  # Reduced from 20
+        MAX_ENEMIES = 20  # Reduced from 20
         current_enemy_count = len(self.enemy_sprites)
 
         if current_enemy_count < MAX_ENEMIES:
             if((pygame.time.get_ticks()-self.last_moved)>20000):
-                delay = 500  # Increased delay when stationary
+                delay = 500  # Decreased delay when stationary
             else:
                 delay = 3000  # Increased delay when moving
         
@@ -220,7 +220,8 @@ class World:
         for enemy in self.enemy_sprites:
             distance = (self.player.pos - enemy.pos).length()
             if distance > 350:  # Reduced distance threshold for more aggressive culling
-                enemies_to_remove.append(enemy)
+                if(type(enemy)!=Dragon):
+                    enemies_to_remove.append(enemy)
         
         # Remove the most distant enemies
         if enemies_to_remove:
@@ -228,7 +229,8 @@ class World:
             # Remove more enemies when performance is needed
             remove_count = min(len(enemies_to_remove), max(1, len(enemies_to_remove) // 2))
             for enemy in enemies_to_remove[:remove_count]:
-                enemy.kill()
+                if(type(enemy)!=Dragon):
+                    enemy.kill()
 
     def on_render(self):
         global wincondition
@@ -359,10 +361,13 @@ class World:
             else:
                 # Distant enemies get simple movement
                 enemy.move_towards(self.player.pos)
-            
-            enemy.update_sprite(self.player.pos - enemy.pos)
-            enemy.update_rect(self.camera_pos)
-        self.dragon.updatepic(self.player.pos, self.enemy_sprites)
+
+            if (enemy!=self.dragon):
+                enemy.update_sprite(self.player.pos - enemy.pos)
+                enemy.update_rect(self.camera_pos)
+            else:
+                self.dragon.updatepic(self.player.pos, self.enemy_sprites, self.player.pos - self.dragon.pos)
+                self.dragon.update_rect(self.camera_pos)
 
     def spawn_random(self):
         """Spawn an enemy in a random walkable location"""
@@ -474,7 +479,6 @@ class World:
                             enemy.die()
                             del(enemy)
                         
-                        
                 #print(type(sprite_collision[0]))
                 self.last_hit_time = current_time
                 if(type(sprite_collision[0])==Ogre):
@@ -580,19 +584,6 @@ class World:
         
         if self.attack_cooldown > 0:
             self.attack_cooldown -= self.dt
-        
-        # Debug toggles
-        if self.keys[pygame.K_c] and not getattr(self, 'c_pressed', False):
-            self.show_collision_debug = not getattr(self, 'show_collision_debug', False)
-            self.c_pressed = True
-        elif not self.keys[pygame.K_c]:
-            self.c_pressed = False
-            
-        if self.keys[pygame.K_p] and not getattr(self, 'p_pressed', False):
-            self.show_path_debug = not getattr(self, 'show_path_debug', False)
-            self.p_pressed = True
-        elif not self.keys[pygame.K_p]:
-            self.p_pressed = False
         
         if self.keys[pygame.K_LSHIFT]:
             self.speedmult=2
@@ -1033,9 +1024,11 @@ class Dragon(GameEntity):
             'leftfar'  :pygame.transform.flip(pygame.image.load(os.path.join('data', 'sprites', 'Dragon.png')), True, False),
             'leftnear' :pygame.transform.flip(pygame.image.load(os.path.join('data', 'sprites', 'DragonOpen.png')), True, False),
         }
+        self.img = pygame.image.load(os.path.join('data', 'sprites', 'Dragon.png'))
         self.last_spawn = 0
         
     def updatepic(self, pos, group, facing_direction):
+        print(type(self))
         dist = (self.pos.x - pos.x, self.pos.y - pos.y)
         far = math.hypot(*dist)
         print(far)
@@ -1058,6 +1051,9 @@ class Dragon(GameEntity):
 class Bullet (GameEntity):
     def __init__(self,pos):
         super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'bullet.png')), 1, 1, 0 , 3)
+
+    def update_sprite(self, facing_direction):
+        pass
 
 
 
