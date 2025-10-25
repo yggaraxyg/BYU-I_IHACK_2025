@@ -206,7 +206,7 @@ class World:
         # Optimize enemy management for performance
         current_enemy_count = len(self.enemy_sprites)
 
-        if current_enemy_count < MAX_ENEMIES:
+        if current_enemy_count < self.MAX_ENEMIES:
             if((pygame.time.get_ticks()-self.last_moved)>20000):
                 delay = 500  # Decreased delay when stationary
             else:
@@ -216,7 +216,7 @@ class World:
                 self.last_spawn = pygame.time.get_ticks()
                 self.spawn_random()
         
-        if current_enemy_count > MAX_ENEMIES:
+        if current_enemy_count > self.MAX_ENEMIES:
             self.cull_distant_enemies()
 
     def cull_distant_enemies(self):
@@ -384,9 +384,9 @@ class World:
         
             for attempt in range(max_attempts):
             # Generate random position in world coordinates (with safety margins)
-            spawn_x = random.randint(32, max(32, (self.map.width - 2) * 16))
-            spawn_y = random.randint(32, max(32, (self.map.height - 2) * 16))
-            spawn_pos = pygame.Vector2(spawn_x, spawn_y)
+                spawn_x = random.randint(32, max(32, (self.map.width - 2) * 16))
+                spawn_y = random.randint(32, max(32, (self.map.height - 2) * 16))
+                spawn_pos = pygame.Vector2(spawn_x, spawn_y)
             
             # Convert to tile coordinates to check collision
             tile_x = max(0, min(int(spawn_x // 16), self.map.width - 1))
@@ -410,14 +410,14 @@ class World:
             # fall back to spawning near the player (but still not in walls)
             self.spawn_near_player_safe(etypes)
         else:
-            line =randint(1,3)
+            line = random.randint(1,3)
             enemy_type = random.choice(etypes)
             if(line==1):
-                self.spawn = enemy_type(pygame.vector2(150,random.randint(200,900)))
+                self.spawn = enemy_type(pygame.Vector2(150,random.randint(200,900)))
             if(line==2):
-                self.spawn = enemy_type(pygame.vector2(700,random.randint(200,900)))
+                self.spawn = enemy_type(pygame.Vector2(700,random.randint(200,900)))
             if(line==3):
-                self.spawn = enemy_type(pygame.vector2(random.randint(150,700),200))
+                self.spawn = enemy_type(pygame.Vector2(random.randint(150,700),200))
             self.enemy_sprites.add(self.spawn)
     
     def spawn_near_player_safe(self, etypes):
@@ -573,7 +573,7 @@ class World:
         game_over_menu.add.label(message, font_size=20, font_color=(255, 0, 0))
         game_over_menu.add.vertical_margin(10)
         if(message=="YOU WIN!"):
-            game_over_menu.add.button("Continue" self.swap_map, font_size=15)
+            game_over_menu.add.button("Continue", self.swap_map, font_size=15)
         game_over_menu.add.button("Restart", self.restart_game, font_size=15)
         game_over_menu.add.button("Main Menu", self.return_to_main_menu, font_size=15)
         game_over_menu.add.button("Quit", pygame_menu.events.EXIT, font_size=15)
@@ -870,10 +870,10 @@ class World:
         self.map_pwidth = self.map.width * 16
         self.map_pheight = self.map.height * 16
         for enemy in self.enemy_sprites:
-            kill(enemy)
+            self.kill(enemy)
             del(enemy)
         for collectible in self.collectible_sprites:
-            kill(collectible)
+            self.kill(collectible)
             del(collectible)
         self.player.pos = pygame.Vector2(60,60)
         starttime= pygame.time.get_ticks()
@@ -883,7 +883,7 @@ class World:
         self.answers=0
         self.newmap=True
         self.MAX_ENEMIES = 5
-        pass.
+        pass
 
 
 class GameEntity(pygame.sprite.Sprite):
