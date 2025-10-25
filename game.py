@@ -745,7 +745,6 @@ class World:
             self.player.score -= hp_upgrade_cost
             player_max_hp += 5
             self.player.maxhp = player_max_hp
-            self.player.hp = player_max_hp
             hp_upgrade_cost += 50
             exit_menu(menu)
 
@@ -768,7 +767,7 @@ class World:
             help_menu.add.label(f"A: {correct_answer_text}", font_size=12, max_char=40, font_color=(0, 255, 0))
         else:
             help_menu.add.label("No questions available.", font_size=12)
-        help_menu.add.button("Heal me up", lambda: self.player.heal(10), font_size=15)
+        help_menu.add.button("Heal me up", lambda: self.player.heal(9999), font_size=15)
         help_menu.add.vertical_margin(10)
         help_menu.add.button("Continue", lambda: exit_menu(help_menu), font_size=15)
 
