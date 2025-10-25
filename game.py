@@ -728,7 +728,7 @@ def win_conditions_menu():
             pass
 
     box = win_condition.add.text_input("Quantity:", default="10", font_size=12)
-    win_condition.add.button("Change Quanity:", lambda:(handle_manual_input()), font_size=12)
+    win_condition.add.button("Change Quantity:", lambda:(handle_manual_input()), font_size=12)
     win_condition.add.button("Correct", lambda:set_wincondition(1), font_size=12)
     win_condition.add.button("Score", lambda:set_wincondition(2), font_size=12)
     win_condition.add.button("Time", lambda:set_wincondition(3), font_size=12)
