@@ -106,8 +106,8 @@ class World:
         self.enemy_sprites.draw(self._screen)
         self.collectable_sprites.draw(self._screen)
         self.weapon_sprites.draw(self._screen)  # Add this line
-        font = pygame.font.SysFont("Courier", 12)
-        text_surface = font.render(f"Score: {self.player.score} HP: {self.player.hp} Time:{(pygame.time.get_ticks()/1000):.2f}s Correct: {self.correct}/{self.answers}", True, (150, 150, 150))
+        font = pygame.font.SysFont("Courier", 11)
+        text_surface = font.render(f"Score:{self.player.score} HP:{self.player.hp} Time:{(pygame.time.get_ticks()/1000):.2f}s Correct:{self.correct}/{self.answers}", True, (150, 150, 150))
         self._screen.blit(text_surface, (10, 10))
         pygame.display.flip()
 
@@ -337,7 +337,11 @@ class World:
             for enemy in hit_enemies:
                 enemy.hurt(5)
                 if enemy.hp <= 0:
-                    self.player.score += enemy.score
+                    if(random.choice([True,False])):
+                        glob=Heart(enemy.pos, (enemy.score/5))
+                    else:
+                        glob=Treasure(enemy.pos, enemy.score)
+                    self.collectable_sprites.add(glob)
                     enemy.die()
         
         pygame.time.set_timer(pygame.USEREVENT + 1, 300)
@@ -369,6 +373,8 @@ class World:
         question_box = questionbox()
         question_box.questionlist = question_list
         question_set = question_box.getQuestion()
+
+        self.current_question_set = question_set
         
         question_text = question_set[0]
         answer1 = question_set[1]
@@ -398,15 +404,37 @@ class World:
         return self.question_result
 
     def answer_question(self, selected_answer, correct_answer, menu):
+        question_set = self.current_question_set
+        correct_answer_text = question_set[correct_answer + 1]
         if selected_answer == correct_answer:
             print("correct")
+            self.question_feedback(True)
             self.question_result = True
         else:
             print("wrong")
+            self.question_feedback(False, correct_answer_text)
             self.question_result = False
             
         menu.disable()
         menu._close()
+    
+    def question_feedback(self, correct, correct_answer=None):
+        feedback_theme = pygame_menu.Theme(
+            background_color=(50, 50, 50, 200),
+            title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE
+        )
+
+        feedback_menu = pygame_menu.Menu('', 280, 180, theme=feedback_theme)
+        
+        if correct:
+            feedback_menu.add.label("Correct!", font_size=18, font_color=(0, 255, 0), align=pygame_menu.locals.ALIGN_CENTER)
+        else:
+            feedback_menu.add.label(f"Incorrect. The answer was {correct_answer}.", font_size=13, font_color=(255, 0, 0), align=pygame_menu.locals.ALIGN_CENTER)
+        
+        feedback_menu.add.vertical_margin(10)
+        feedback_menu.add.button("Continue", feedback_menu.disable, font_size=15)
+        
+        feedback_menu.mainloop(self._screen)
 
 
 class GameEntity(pygame.sprite.Sprite):
