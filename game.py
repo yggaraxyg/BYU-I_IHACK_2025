@@ -125,7 +125,7 @@ class World:
     def enemies_update(self):
         for enemy in self.enemy_sprites:
 
-            enemy.move_towards(self.camera_move)
+            enemy.move_towards(self.player.pos)
             enemy.cam(self.camera_pos)
 
     def spawn_random(self):
