@@ -83,11 +83,13 @@ class World:
         if ((pygame.time.get_ticks()-self.last_spawn)>delay):
             self.last_spawn = pygame.time.get_ticks()
             self.spawn_random()
-        
+            
             
         pass
 
     def on_render(self):
+        global wincondition
+        global winquantity
         self._screen.fill((0,0,0))
         for row in range(self.map.width):
             for column in range (self.map.height):
@@ -106,6 +108,8 @@ class World:
         self.weapon_sprites.draw(self._screen)  # Add this line
         font = pygame.font.SysFont("Courier", 11)
         text_surface = font.render(f"Score:{self.player.score} HP:{self.player.hp} Time:{(pygame.time.get_ticks()/1000):.2f}s Correct:{self.correct}/{self.answers}", True, (150, 150, 150))
+        if ((wincondition==3)&&(winquantity<=(pygame.time.get_ticks()/1000))):
+            self.game_over("YOU WIN!")
         self._screen.blit(text_surface, (10, 10))
         pygame.display.flip()
 
@@ -165,6 +169,8 @@ class World:
         pass
 
     def collision_check(self):
+        global wincondition
+        global winquantity
         sprite_collision = pygame.sprite.spritecollide(self.player, self.enemy_sprites, False)
         
         cooldown_time = 250
@@ -199,8 +205,13 @@ class World:
                         self.player.score+=col.score
                     else:
                         self.player.hpmod(col.hp)
-                        
                 col.die()
+                if((wincondition==1)&&(winquantity<=self.correct)):
+                    self.game_over("YOU WIN!")
+                if((wincondition==4)&&(winquantity<=self.answers)):
+                    self.game_over("YOU WIN!")
+                if((wincondition==2)&&(winquantity<=self.player.score)):
+                    self.game_over("YOU WIN!")
         self.player.pos.x += self.player.velocity.x
         for tile_rect in self.collision_tiles:
             if self.player.rect.colliderect(tile_rect):
@@ -635,9 +646,6 @@ def create_manual_menu():
     return manual_menu
 
 def win_conditions_menu():
-
-    global wincondition
-    global winquantity
     theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
                                      title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
     
@@ -645,12 +653,13 @@ def win_conditions_menu():
 
     def handle_manual_input():
         try:
-            winquantity = int(box.get_value())
+           set_winquantity(box.get_value())
         except:
+            print("INVALID!")
             pass
 
     box = win_condition.add.text_input("Quantity:", default="10", font_size=12)
-    win_condition.add.button("Change Quanity:", handle_manual_input, font_size=12)
+    win_condition.add.button("Change Quanity:", lambda:(handle_manual_input()), font_size=12)
     win_condition.add.button("Correct", lambda:set_wincondition(1), font_size=12)
     win_condition.add.button("Score", lambda:set_wincondition(2), font_size=12)
     win_condition.add.button("Time", lambda:set_wincondition(3), font_size=12)
@@ -662,6 +671,13 @@ def win_conditions_menu():
 def set_wincondition(numb):
     global wincondition
     wincondition=numb
+    print(wincondition)
+
+def set_winquantity(numb):
+    global winquantity
+    winquantity=numb
+    print(winquantity)
+    
     
 def main_menu():
     theme = pygame_menu.Theme(background_color=(0, 0, 0, 0), title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
