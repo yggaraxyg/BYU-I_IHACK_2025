@@ -75,7 +75,7 @@ class World:
         self.kill()
         self.dt = self.clock.tick(60)
  
-        if ((pygame.time.get_ticks()-self.last_spawn)>1000):
+        if ((pygame.time.get_ticks()-self.last_spawn)>2000):
             self.last_spawn = pygame.time.get_ticks()
             self.spawn_random()
         pass
@@ -151,7 +151,7 @@ class World:
 
     def collision_check(self):
         sprite_collision = pygame.sprite.spritecollide(self.player, self.enemy_sprites, False)
-        cooldown_time = 120
+        cooldown_time = 250
         current_time = pygame.time.get_ticks()
         if current_time - self.last_hit_time >= cooldown_time:
             if sprite_collision:
@@ -170,7 +170,7 @@ class World:
                     if (abs(col.score)>abs(col.hp)):
                         self.player.score+=col.score
                     else:
-                        self.player.hp+=col.hp
+                        self.player.hpmod(col.hp)
                         
                 col.die()
         self.player.pos.x += self.player.velocity.x
@@ -398,15 +398,15 @@ class Heart(GameEntity):
 
 class Salamander(GameEntity):
     def __init__(self, pos):
-        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'salamander.png')), 20, 20, 40 , 0.25)        
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'salamander.png')), 10, 10, 40 , 0.20)        
 
 class Eyeball(GameEntity):
     def __init__(self, pos):
-        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'florb.png')), 50, 50, 40 , 0)
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'florb.png')), 20, 20, 10 , 0)
 
 class Ogre(GameEntity):
     def __init__(self, pos):
-        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'ogre.png')), 400, 400, 1000 , 0.05)
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'ogre.png')), 100, 100, 1000 , 0.05)
         
 def start_game():
     world = World()
@@ -537,7 +537,7 @@ def main_menu():
 
 if __name__ == "__main__":
 
-    '''
+    
     start_game()
     '''
     
