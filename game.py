@@ -314,7 +314,7 @@ class World:
 
     def player_update(self):
         self.player_relative = self.player.pos - self.camera_pos
-        self.player.update_sprite(self.player.facing)
+        self.player.update_sprite(self.player.facing, self.speedmult)
         self.player_sprite.update(self.player_relative)
         self.player.update_rect(self.camera_pos)
         self.collision_check()
@@ -485,12 +485,11 @@ class World:
                     self.player.hurt(2)
                 self.player.hurt(1)
                 try:
-                    self.player.pos += (self.knockbackdir / 4)
+                    self.player.velocity += (self.knockbackdir / 4)
                 except Exception as e:
                     print (e)
         else:
-            self.player.pos -= self.player.facing * 2
-            self.player.pos += (self.knockbackdir / 8)
+            self.player.velocity += (self.knockbackdir / 8)
 
 
         for col in self.collectable_sprites:
@@ -515,6 +514,7 @@ class World:
                 if((wincondition==2) and (winquantity<=self.player.score)):
                     self.game_over("YOU WIN!")
 
+
         prev_tile =  pygame.Vector2(self.player.pos.x / 16, self.player.pos.y /16)    
         next_pos = self.player.pos + self.player.velocity
         next_tile =  pygame.Vector2(next_pos.x / 16 , next_pos.y / 16)           
@@ -528,7 +528,7 @@ class World:
             if self.player.velocity.y > 0 and next_tile.y != prev_tile.y and next_tile.x == prev_tile.x:
                 self.player.pos.y = (int(next_tile.y) * 16) - 1
             if self.player.velocity.y < 0 and next_tile.y != prev_tile.y and next_tile.x == prev_tile.x:
-                self.player.pos.y = (int(next_tile.y) * 16) + 16
+                self.player.pos.y = (int(next_tile.y) * 16) + 24
             if self.map.get_tile_gid(next_tile.x, prev_tile.y, 1) == 0:
                 self.player.pos.x = next_pos.x
             if self.map.get_tile_gid(prev_tile.x, next_tile.y, 1) == 0:
@@ -921,6 +921,10 @@ class GameEntity(pygame.sprite.Sprite):
 
 class Player(GameEntity):
     def __init__(self, pos):
+        
+        self.frame = 0
+        self.clock = pygame.time.Clock()
+        self.dt = self.clock.tick(60)
 
         self.sprites = {
             'up': pygame.image.load(os.path.join('data', 'sprites', 'player_up.png')),
@@ -928,11 +932,35 @@ class Player(GameEntity):
             'left': pygame.image.load(os.path.join('data', 'sprites', 'player_left.png')),
             'right': pygame.image.load(os.path.join('data', 'sprites', 'player_right.png')),
         }
+        self.right_animated = {
+            0: pygame.image.load(os.path.join('data', 'sprites', 'right_animated', 'sprite_0.png')),
+            1: pygame.image.load(os.path.join('data', 'sprites', 'right_animated', 'sprite_1.png')),
+            2: pygame.image.load(os.path.join('data', 'sprites', 'right_animated', 'sprite_2.png')),
+            3: pygame.image.load(os.path.join('data', 'sprites', 'right_animated', 'sprite_3.png')),
+        }
+        self.left_animated = {
+            0: pygame.image.load(os.path.join('data', 'sprites', 'left_animated', 'sprite_0.png')),
+            1: pygame.image.load(os.path.join('data', 'sprites', 'left_animated', 'sprite_1.png')),
+            2: pygame.image.load(os.path.join('data', 'sprites', 'left_animated', 'sprite_2.png')),
+            3: pygame.image.load(os.path.join('data', 'sprites', 'left_animated', 'sprite_3.png')),
+        }
+        self.up_animated = {
+            0: pygame.image.load(os.path.join('data', 'sprites', 'up_animated', 'sprite_0.png')),
+            1: pygame.image.load(os.path.join('data', 'sprites', 'up_animated', 'sprite_1.png')),
+            2: pygame.image.load(os.path.join('data', 'sprites', 'up_animated', 'sprite_2.png')),
+            3: pygame.image.load(os.path.join('data', 'sprites', 'up_animated', 'sprite_3.png')),
+        }
+        self.down_animated = {
+            0: pygame.image.load(os.path.join('data', 'sprites', 'down_animated', 'sprite_0.png')),
+            1: pygame.image.load(os.path.join('data', 'sprites', 'down_animated', 'sprite_1.png')),
+            2: pygame.image.load(os.path.join('data', 'sprites', 'down_animated', 'sprite_2.png')),
+            3: pygame.image.load(os.path.join('data', 'sprites', 'down_animated', 'sprite_3.png')),
+        }
 
         super().__init__(pos, self.sprites['down'], 10, 10, 0, 0.1)
         self.current_direction = 'down'
     
-    def update_sprite(self, facing_direction):
+    def update_sprite(self, facing_direction, speed):
         new_direction = 'down'
         if facing_direction.y < 0:
             new_direction = 'up'
@@ -946,6 +974,27 @@ class Player(GameEntity):
         if new_direction != self.current_direction:
             self.current_direction = new_direction
             self.image = self.sprites[new_direction]
+        if self.velocity.x >0:
+            self.image = self.right_animated[int(self.frame)]
+            self.frame += (2 / self.dt) * speed
+            if self.frame >= 4:
+                self.frame = 0
+        if self.velocity.x <0:
+            self.image = self.left_animated[int(self.frame)]
+            self.frame += (2 / self.dt) * speed
+            if self.frame >= 4:
+                self.frame = 0
+        if self.velocity.y >0:
+            self.image = self.down_animated[int(self.frame)]
+            self.frame += (2 / self.dt) * speed
+            if self.frame >= 4:
+                self.frame = 0
+        if self.velocity.y <0:
+            self.image = self.up_animated[int(self.frame)]
+            self.frame += (2 / self.dt) * speed
+            if self.frame >= 4:
+                self.frame = 0
+
     
     def update(self, pos):
         self.rect = self.image.get_rect(center = pos)
