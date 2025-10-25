@@ -166,11 +166,12 @@ class World:
         for col in self.collectable_sprites:
             sprite_collision = pygame.sprite.spritecollide(col, self.player_sprite, False)
             if sprite_collision:
-                if (abs(col.score)>abs(col.hp)):
-                    self.player.score+=col.score
-                else:
-                    self.player.hp+=col.hp
-                    
+                if(self.show_question_popup()):
+                    if (abs(col.score)>abs(col.hp)):
+                        self.player.score+=col.score
+                    else:
+                        self.player.hp+=col.hp
+                        
                 col.die()
         self.player.pos.x += self.player.velocity.x
         for tile_rect in self.collision_tiles:
@@ -192,6 +193,39 @@ class World:
     def kill(self):
         if self.player.hp <= 0:
             self.player.kill()
+            self._running = False
+            self.game_over()
+
+    def game_over(self):
+        print("Game Over")
+        theme = pygame_menu.Theme(background_color=(50, 50, 50, 200),
+                                 title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
+        
+        game_over_menu = pygame_menu.Menu('', 320, 240, theme=theme)
+        game_over_menu.add.label("GAME OVER", font_size=20, font_color=(255, 0, 0))
+        game_over_menu.add.vertical_margin(10)
+        game_over_menu.add.button("Restart", self.restart_game, font_size=15)
+        game_over_menu.add.button("Main Menu", self.return_to_main_menu, font_size=15)
+        game_over_menu.add.button("Quit", pygame_menu.events.EXIT, font_size=15)
+
+        try:
+            game_over_menu.mainloop(self._screen)
+        except Exception as e:
+            pass
+
+    def restart_game(self):
+        start_game()
+
+    def return_to_main_menu(self):
+        menu = main_menu()
+
+        try:
+            menu.mainloop(screen)
+        except Exception as e:
+            pass
+        finally:
+            pygame.quit()
+            sys.exit()
 
     def get_input(self):
         self.keys = pygame.key.get_pressed()
@@ -242,6 +276,8 @@ class World:
         answer4 = question_set[4]
         correct_answer_index = question_set[5]
         
+        self.question_result = None
+
         question_theme = pygame_menu.Theme(
             background_color=(50, 50, 50, 200),
             title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE
@@ -256,16 +292,17 @@ class World:
         self.question_menu.add.button(f"C) {answer3}", lambda: self.answer_question(2, correct_answer_index, self.question_menu), font_size=10)
         self.question_menu.add.button(f"D) {answer4}", lambda: self.answer_question(3, correct_answer_index, self.question_menu), font_size=10)
         
-        # Show the menu
         self.question_menu.mainloop(self._screen)
+
+        return self.question_result
 
     def answer_question(self, selected_answer, correct_answer, menu):
         if selected_answer == correct_answer:
             print("correct")
-            # Eventually give player loot they picked up; for now just heal 1 HP
-            self.player.hpmod(1)
+            self.question_result = True
         else:
             print("wrong")
+            self.question_result = False
             
         menu.disable()
         menu._close()
@@ -478,19 +515,11 @@ def create_manual_menu():
 
     return manual_menu
 
-if __name__ == "__main__":
 
+def main_menu():
+    theme = pygame_menu.Theme(background_color=(0, 0, 0, 0), title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
     
-    start_game()
-
-    """   
-    pygame.init()
-    screen = pygame.display.set_mode((320, 240), pygame.RESIZABLE | pygame.SCALED)
-
-    custom_theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
-                                     title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
-    
-    menu = pygame_menu.Menu('', 320, 240, theme=custom_theme)
+    menu = pygame_menu.Menu('', 320, 240, theme=theme)
     
     questions_submenu = create_questions_menu()
     
@@ -504,6 +533,19 @@ if __name__ == "__main__":
     menu.add.vertical_margin(10)
     menu.add.banner(pygame_menu.BaseImage(image_path=questions_button_image), questions_submenu)
 
+    return menu
+
+if __name__ == "__main__":
+
+    '''
+    start_game()
+    '''
+    
+    pygame.init()
+    screen = pygame.display.set_mode((320, 240), pygame.RESIZABLE | pygame.SCALED)
+
+    menu = main_menu()
+
     try:
         menu.mainloop(screen)
     except Exception as e:
@@ -511,4 +553,4 @@ if __name__ == "__main__":
     finally:
         pygame.quit()
         sys.exit()
-    #"""
+    #'''
