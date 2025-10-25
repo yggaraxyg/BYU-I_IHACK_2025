@@ -127,14 +127,14 @@ class World:
     def player_update(self):
         self.player_relative = self.player.pos - self.camera_pos
         self.player_sprite.update(self.player_relative)
+        self.player.update_rect(self.camera_pos)
         self.collision_check()
 
     
     def enemies_update(self):
         for enemy in self.enemy_sprites:
-
             enemy.move_towards(self.player.pos)
-            enemy.cam(self.camera_pos)
+            enemy.update_rect(self.camera_pos)
 
     def spawn_random(self):
         etypes = [Salamander, Salamander, Salamander, Salamander, Salamander, Eyeball, Eyeball, Eyeball, Eyeball, Eyeball, Ogre]
@@ -238,7 +238,7 @@ class World:
         menu = main_menu()
 
         try:
-            menu.mainloop(screen)
+            menu.mainloop(self._screen)
         except Exception as e:
             pass
         finally:
@@ -312,18 +312,17 @@ class World:
         
         sword = Weapon(sword_pos, rotation)
         self.weapon_sprites.add(sword)
+        sword.update_rect(self.camera_pos)
         self.check_weapon_collision()
 
     def weapon_update(self):
         for weapon in self.weapon_sprites:
-            weapon_relative = weapon.pos - self.camera_pos
-            weapon.update(weapon_relative)
+            weapon.update_rect(self.camera_pos)
 
     def check_weapon_collision(self):
         for weapon in self.weapon_sprites:
             hit_enemies = pygame.sprite.spritecollide(weapon, self.enemy_sprites, False)
             for enemy in hit_enemies:
-                print(f"Hit {enemy.__class__.__name__}")
                 enemy.hurt(5)
                 if enemy.hp <= 0:
                     self.player.score += enemy.score
@@ -408,8 +407,9 @@ class GameEntity(pygame.sprite.Sprite):
         self.hp = hp
         self.score = score
         self.speed = speed
-        self.velocity = 0
+        self.velocity = pygame.Vector2(0,0)
         self.facing = pygame.Vector2(0,0)
+        self.cords = [pos.x, pos.y]
 
     def hpmod(self, num):
         self.hp+=num
@@ -461,6 +461,10 @@ class GameEntity(pygame.sprite.Sprite):
             direction=direction.normalize()
             self.pos+=direction*self.speed
             self.rect.center=self.pos
+    
+    def update_rect(self, camera_pos):
+        self.rect.center = self.pos - camera_pos
+        
     def cam(self, cam):
         self.rect = self.image.get_rect(center = self.pos - cam)
 
@@ -479,8 +483,8 @@ class Weapon(GameEntity):
         super().__init__(pos, rotated_image, 1, 1, 0, 0)
         self.rotation = rotation
     
-    def update(self, pos):
-        self.rect = self.image.get_rect(center = pos)
+    def update(self, camera_pos):
+        self.rect.center = self.pos - camera_pos
 
 class Turtle(GameEntity):
     def __init__(self, pos):
