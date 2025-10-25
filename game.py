@@ -5,6 +5,11 @@ import random
 import pygame_menu
 import pytmx
 from pytmx.util_pygame import load_pygame
+import tkinter
+from tkinter import filedialog
+from questionbackend import *
+
+question_list = []
 
 class World:
     def __init__(self):
@@ -240,9 +245,41 @@ def start_game():
     world = World()
     world.on_execute()
 
-def show_questions():
-    print("If only this did something")
-    pass # Todo
+def manual_input():
+    # Manual input function for custom questions
+    print("todo")
+    pass
+
+def choose_default():
+    # Select between default csv files
+    print("todo")
+    pass
+
+def user_csv():
+    # Load user csv file
+    root = tkinter.Tk()
+    root.withdraw()
+    file_path = filedialog.askopenfilename(title="Select CSV File", filetypes=[("CSV files", "*.csv")])
+    if file_path:
+        print(f"Selected file: {file_path}")
+        question_list = questionbox().getFromCSV(file_path)
+        print(question_list)
+    else:
+        print("No file selected.")
+    
+    root.destroy()    
+
+def create_questions_menu():
+    theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
+                                     title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
+    
+    question_menu = pygame_menu.Menu('Manage ?s', 320, 240, theme=theme)
+
+    question_menu.add.button("Manual Input", manual_input, font_size=15)
+    question_menu.add.button("Choose Default CSV", choose_default, font_size=15)
+    question_menu.add.button("Load User CSV", user_csv, font_size=15)
+
+    return question_menu
 
 if __name__ == "__main__":
     pygame.init()
@@ -253,6 +290,9 @@ if __name__ == "__main__":
     
     menu = pygame_menu.Menu('', 320, 240, theme=custom_theme)
     
+    # Create the questions submenu
+    questions_submenu = create_questions_menu()
+    
     logo_image = os.path.join('data', 'sprites', 'logo.png')
     play_button_image = os.path.join('data', 'sprites', 'play_button.png')
     questions_button_image = os.path.join('data', 'sprites', 'questions_button.png')
@@ -261,6 +301,6 @@ if __name__ == "__main__":
     menu.add.vertical_margin(20)
     menu.add.banner(pygame_menu.BaseImage(image_path=play_button_image), start_game)
     menu.add.vertical_margin(10)
-    menu.add.banner(pygame_menu.BaseImage(image_path=questions_button_image), show_questions)
+    menu.add.banner(pygame_menu.BaseImage(image_path=questions_button_image), questions_submenu)
 
     menu.mainloop(screen)
