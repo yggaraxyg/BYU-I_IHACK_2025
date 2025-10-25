@@ -37,12 +37,14 @@ class World:
         self.eyeball = Eyeball(pygame.Vector2(40,200))
         #self.ogre = Ogre(pygame.Vector2(200,200))
         self.treasure = Treasure(pygame.Vector2(200,40), 100)
+        self.heart = Heart(pygame.Vector2(200,80), 5)
         self.player_sprite.add(self.player)
         self.enemy_sprites.add(self.turtle)
         #self.enemy_sprites.add(self.salamander)
         self.enemy_sprites.add(self.eyeball)
         #self.enemy_sprites.add(self.ogre)
         self.collectable_sprites.add(self.treasure)
+        self.collectable_sprites.add(self.heart)
         self.last_hit_time = 0
         self.map = pytmx.load_pygame(os.path.join('data', 'maps', 'map1.tmx'))
         self.map_pwidth = self.map.width * 16
@@ -136,10 +138,15 @@ class World:
                 self.player.pos -= self.player.facing * 2
         else:
             self.player.pos -= self.player.facing * 2
+        print(f"Score: {self.player.score} HP: {self.player.hp}")
         for col in self.collectable_sprites:
             sprite_collision = pygame.sprite.spritecollide(col, self.player_sprite, False)
             if sprite_collision:
-                self.player.score+=col.score
+                if (abs(col.score)>abs(col.hp)):
+                    self.player.score+=col.score
+                else:
+                    self.player.hp+=col.hp
+                    
                 col.die()
         self.player.pos.x += self.player.velocity.x
 #        for tile_rect in self.collision_tiles:
@@ -254,6 +261,7 @@ class GameEntity(pygame.sprite.Sprite):
 
     def die(self):
         self.kill()
+        del(self)
 
     def move_towards(self, pos):
         direction = pos-self.pos
@@ -405,7 +413,7 @@ def create_manual_menu():
 
 if __name__ == "__main__":
 
-    '''
+    
     start_game()
     '''
     
