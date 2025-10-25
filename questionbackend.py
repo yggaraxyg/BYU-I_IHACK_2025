@@ -1,19 +1,19 @@
 from csv_parser import parse_csv as pcsv
+import random
 
 class questionbox:
 
     def __init__(self):
         self.questionlist = []
     
-    #adds question with question que and answer ans
-    def addQuestion(que, ans):
+    def addQuestion(self, que, ans):
         self.questionlist.append([que,ans])
 
-    def addQuestion(que, corans, w1, w2, w3):                                                                                                                   
-        self.questionlist.append([que,corans,w1,w2,w3])                                                                                                         
-                                                                                                                                                                
+    def addQuestion(self, que, corans, w1, w2, w3):
+        self.questionlist.append([que,corans,w1,w2,w3])
+
     #gets array with question followed by three random answers and the correct one. the sixth element is which one is correct                                   
-    def getQuestion():                                                                                                                                          
+    def getQuestion(self):                                                                                                                                          
         corans = random.choice(self.questionlist)                                                                                                               
         wrongans = []                                                                                                                                          
         if (len(corans)==2):                                                                                                                                   
@@ -38,13 +38,13 @@ class questionbox:
         return questionset
 
     #add questions from a CSV
-    def getFromCSV(name):
+    def getFromCSV(self, name):
         box = pcsv(name)
         while(len(box)>0):
             self.questionlist.append(box.pop(0))
 
     #remove a question with the question que
-    def removeQuestionByQue(que):
+    def removeQuestionByQue(self, que):
         salt = []
         for i in range(len(self.questionlist)):
             salt.append(self.questionlist[i][0])
@@ -57,11 +57,11 @@ class questionbox:
             return    
 
     #remove a question by index
-    def removeQuestionByIndex(I):
+    def removeQuestionByIndex(self, I):
         self.questionlist.pop(I)
 
     #erase all questions
-    def wipequestions():
+    def wipequestions(self):
         self.questionlist=[]
 
 
