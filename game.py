@@ -93,8 +93,8 @@ class World:
         self._screen.fill((0,0,0))
         for row in range(self.map.width):
             for column in range (self.map.height):
-                offsetx = -256
-                offsety = -256
+                offsetx = 0
+                offsety = 0
                 self.mapdisplay = pygame.Vector2(row * 16 + offsetx, column * 16 + offsety) - self.camera_pos
                 try:
                     tile = self.map.get_tile_image(row, column, 0)
@@ -203,23 +203,29 @@ class World:
                         self.player.hpmod(col.hp)
                         
                 col.die()
-        self.player.pos.x += self.player.velocity.x
-        for tile_rect in self.collision_tiles:
-            if self.player.rect.colliderect(tile_rect):
-                if self.player_velocity.x > 0:
-                    self.player.rect.right = tile_rect.left
-                if self.player_velocity.x < 0:
-                    self.player.rect.left = tile_rect.right
-                self.player.velocity.x = 0
-        self.player.pos.y += self.player.velocity.y
-        for tile_rect in self.collision_tiles:
-            if self.player.rect.colliderect(tile_rect):
-                if self.player_velocity.y > 0:
-                    self.player.rect.bottom = tile_rect.top
-                if self.player_velocity.y < 0:
-                    self.player.rect.top = tile_rect.bottom
-                self.player.velocity.y = 0
-        
+
+        prev_tile =  pygame.Vector2(self.player.pos.x / 16, self.player.pos.y /16)    
+        next_pos = self.player.pos + self.player.velocity
+        next_tile =  pygame.Vector2(next_pos.x / 16 , next_pos.y /16)           
+        tile = self.map.get_tile_gid(next_tile.x, next_tile.y, 1)
+        self.tile_pos = pygame.Vector2(self.player.pos.x - (prev_tile.x * 16), self.player.pos.y - (prev_tile.y * 16))
+        if tile:
+            if self.player.velocity.x > 0 and next_tile.x != prev_tile.x and next_tile.y == prev_tile.y:
+                self.player.pos.x = (int(next_tile.x) * 16) - 1
+            if self.player.velocity.x < 0 and next_tile.x != prev_tile.x and next_tile.y == prev_tile.y:
+                self.player.pos.x = (int(next_tile.x) * 16) + 16
+            if self.player.velocity.y > 0 and next_tile.y != prev_tile.y and next_tile.x == prev_tile.x:
+                self.player.pos.y = (int(next_tile.y) * 16) - 1
+            if self.player.velocity.y < 0 and next_tile.y != prev_tile.y and next_tile.x == prev_tile.x:
+                self.player.pos.y = (int(next_tile.y) * 16) + 16
+            if self.map.get_tile_gid(next_tile.x, prev_tile.y, 1) == 0:
+                self.player.pos.x = next_pos.x
+            if self.map.get_tile_gid(prev_tile.x, next_tile.y, 1) == 0:
+                self.player.pos.y = next_pos.y
+
+        else:
+            self.player.pos= next_pos
+
     def kill(self):
         if self.player.hp <= 0:
             self.player.kill()
