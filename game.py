@@ -44,14 +44,14 @@ class World:
         self.collectable_sprites = pygame.sprite.Group()
         self.player = Player(pygame.Vector2(60,60))
         self.turtle = Turtle(pygame.Vector2(20, 20))
-        #self.salamander = Salamander(pygame.Vector2(100,100))
+        self.salamander = Salamander(pygame.Vector2(100,100))
         self.eyeball = Eyeball(pygame.Vector2(40,200))
         #self.ogre = Ogre(pygame.Vector2(200,200))
         self.treasure = Treasure(pygame.Vector2(200,40), 100)
         self.heart = Heart(pygame.Vector2(200,80), 5)
         self.player_sprite.add(self.player)
         self.enemy_sprites.add(self.turtle)
-        #self.enemy_sprites.add(self.salamander)
+        self.enemy_sprites.add(self.salamander)
         self.enemy_sprites.add(self.eyeball)
         #self.enemy_sprites.add(self.ogre)
         self.collectable_sprites.add(self.treasure)
@@ -159,11 +159,12 @@ class World:
         for col in self.collectable_sprites:
             sprite_collision = pygame.sprite.spritecollide(col, self.player_sprite, False)
             if sprite_collision:
-                if (abs(col.score)>abs(col.hp)):
-                    self.player.score+=col.score
-                else:
-                    self.player.hp+=col.hp
-                    
+                if(self.show_question_popup()):
+                    if (abs(col.score)>abs(col.hp)):
+                        self.player.score+=col.score
+                    else:
+                        self.player.hp+=col.hp
+                        
                 col.die()
         self.player.pos.x += self.player.velocity.x
         for tile_rect in self.collision_tiles:
@@ -268,6 +269,8 @@ class World:
         answer4 = question_set[4]
         correct_answer_index = question_set[5]
         
+        self.question_result = None
+
         question_theme = pygame_menu.Theme(
             background_color=(50, 50, 50, 200),
             title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE
@@ -282,16 +285,17 @@ class World:
         self.question_menu.add.button(f"C) {answer3}", lambda: self.answer_question(2, correct_answer_index, self.question_menu), font_size=10)
         self.question_menu.add.button(f"D) {answer4}", lambda: self.answer_question(3, correct_answer_index, self.question_menu), font_size=10)
         
-        # Show the menu
         self.question_menu.mainloop(self._screen)
+
+        return self.question_result
 
     def answer_question(self, selected_answer, correct_answer, menu):
         if selected_answer == correct_answer:
             print("correct")
-            # Eventually give player loot they picked up; for now just heal 1 HP
-            self.player.hpmod(1)
+            self.question_result = True
         else:
             print("wrong")
+            self.question_result = False
             
         menu.disable()
         menu._close()
