@@ -14,10 +14,26 @@
         },
         "#Walls&Floor": {
             "dynamicWrapping": false
+        },
+        "#grass": {
+            "dynamicWrapping": true
+        },
+        "map1.tmx": {
+            "scale": 0.6599,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 478.8604333989999,
+                "y": 661.4638581603273
+            }
+        },
+        "map1.tmx#Walls&Floor": {
+            "scaleInDock": 1
         }
     },
     "last.imagePath": "/home/nate/Downloads",
+    "map.height": 80,
     "map.lastUsedFormat": "tmx",
+    "map.width": 64,
     "openFiles": [
     ],
     "project": "map1.tiled-project",
