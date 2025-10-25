@@ -55,6 +55,8 @@ class World:
         self.map_pwidth = self.map.width * 16
         self.map_pheight = self.map.height * 16
         self.last_spawn = 0
+        self.last_moved = 0 
+        self.cameralock = pygame.Vector2(1,1)
         self.collisionmap()
         self.weapon_sprites = pygame.sprite.Group()
         self.attack_cooldown = 0
@@ -64,22 +66,33 @@ class World:
 
         self.player_update()
         self.camera()
+      
         self.enemies_update()
+        
         self.sprite_update()
+        
         self.weapon_update()
         self.kill()
         self.dt = self.clock.tick(60)
- 
-        if ((pygame.time.get_ticks()-self.last_spawn)>1000):
+
+        if((pygame.time.get_ticks()-self.last_moved)>20000):
+            delay = 200
+        else:
+            delay = 2000           
+        if ((pygame.time.get_ticks()-self.last_spawn)>delay):
             self.last_spawn = pygame.time.get_ticks()
             self.spawn_random()
+        
+            
         pass
 
     def on_render(self):
         self._screen.fill((0,0,0))
         for row in range(self.map.width):
             for column in range (self.map.height):
-                self.mapdisplay = pygame.Vector2(row * 16, column * 16) - self.camera_pos
+                offsetx = -256
+                offsety = -256
+                self.mapdisplay = pygame.Vector2(row * 16 + offsetx, column * 16 + offsety) - self.camera_pos
                 try:
                     tile = self.map.get_tile_image(row, column, 0)
                 except:
@@ -118,38 +131,41 @@ class World:
     
     def enemies_update(self):
         for enemy in self.enemy_sprites:
-            '''enemy.camview(self.player.velocity, self.cameralock)'''
-            enemy.move_towards(self.player_relative)
+            enemy.move_towards(self.player.pos)
             enemy.update_rect(self.camera_pos)
 
     def spawn_random(self):
-        etypes = [Salamander, Salamander, Salamander, Eyeball, Eyeball, Eyeball, Ogre]
+        etypes = [Salamander, Salamander, Salamander, Salamander, Salamander, Eyeball, Eyeball, Eyeball, Eyeball, Eyeball, Ogre]
         self.spawn = random.choice(etypes)(pygame.Vector2(random.randint(0,768),random.randint(0,1152)))
         self.enemy_sprites.add(self.spawn)
             
         
     def camera(self):
         self.cameralock = pygame.Vector2(1,1)
-        self.camera_pos = self.player.pos - 0.5 * pygame.Vector2(self.width, self.height)
-        if self.camera_pos.x <= 0:
-            self.camera_pos.x = 0
+        self.camera_next_pos = self.player.pos - 0.5 * pygame.Vector2(self.width, self.height)
+        if self.camera_next_pos.x <= 0:
+            self.camera_next_pos.x = 0
             self.cameralock.x = 0
-        if self.camera_pos.y <= 0:
-            self.camera_pos.y = 0
+        if self.camera_next_pos.y <= 0:
+            self.camera_next_pos.y = 0
             self.cameralock.y = 0
-        if self.camera_pos.x >= self.map_pwidth - self.width:
-            self.camera_pos.x = self.map_pwidth - self.width
+        if self.camera_next_pos.x >= self.map_pwidth - self.width:
+            self.camera_next_pos.x = self.map_pwidth - self.width
             self.cameralock.x = 0
-        if self.camera_pos.y >= self.map_pheight - self.height:
-            self.camera_pos.y = self.map_pheight - self.height
+        if self.camera_next_pos.y >= self.map_pheight - self.height:
+            self.camera_next_pos.y = self.map_pheight - self.height
             self.cameralock.y = 0
+        self.camera_move = self.camera_next_pos - self.camera_pos
+        self.camera_pos = self.camera_next_pos
 
     def sprite_update(self):
+        for sprite in self.collectable_sprites:
+            sprite.cam(self.camera_pos)
         pass
 
     def collision_check(self):
         sprite_collision = pygame.sprite.spritecollide(self.player, self.enemy_sprites, False)
-        cooldown_time = 120
+        cooldown_time = 250
         current_time = pygame.time.get_ticks()
         if current_time - self.last_hit_time >= cooldown_time:
             if sprite_collision:
@@ -168,7 +184,7 @@ class World:
                     if (abs(col.score)>abs(col.hp)):
                         self.player.score+=col.score
                     else:
-                        self.player.hp+=col.hp
+                        self.player.hpmod(col.hp)
                         
                 col.die()
         self.player.pos.x += self.player.velocity.x
@@ -192,15 +208,15 @@ class World:
         if self.player.hp <= 0:
             self.player.kill()
             self._running = False
-            self.game_over()
+            self.game_over("GAME OVER")
 
-    def game_over(self):
+    def game_over(self, message):
         print("Game Over")
         theme = pygame_menu.Theme(background_color=(50, 50, 50, 200),
                                  title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
         
         game_over_menu = pygame_menu.Menu('', 320, 240, theme=theme)
-        game_over_menu.add.label("GAME OVER", font_size=20, font_color=(255, 0, 0))
+        game_over_menu.add.label(message, font_size=20, font_color=(255, 0, 0))
         game_over_menu.add.vertical_margin(10)
         game_over_menu.add.button("Restart", self.restart_game, font_size=15)
         game_over_menu.add.button("Main Menu", self.return_to_main_menu, font_size=15)
@@ -241,15 +257,19 @@ class World:
         if self.keys[pygame.K_w]:
             self.player.velocity.y -= self.player.speed * self.dt * self.speedmult
             self.player.facing.y = -1
+            self.last_moved= pygame.time.get_ticks()
         if self.keys[pygame.K_s]:
             self.player.velocity.y += self.player.speed * self.dt * self.speedmult
             self.player.facing.y = 1
+            self.last_moved= pygame.time.get_ticks()
         if self.keys[pygame.K_a]:
             self.player.velocity.x -= self.player.speed * self.dt * self.speedmult
             self.player.facing.x = -1
+            self.last_moved= pygame.time.get_ticks()
         if self.keys[pygame.K_d]:
             self.player.velocity.x += self.player.speed * self.dt * self.speedmult
             self.player.facing.x = 1
+            self.last_moved= pygame.time.get_ticks()
         
         if self.attack_cooldown <= 0:
             if self.keys[pygame.K_UP]:
@@ -427,10 +447,6 @@ class GameEntity(pygame.sprite.Sprite):
     def sety(self, y):
         self.cords[1]=y
 
-    '''def camview(self, cam, lock):
-        self.pos.x -= (cam.x * lock.x)
-        self.pos.y -= (cam.y * lock.y)'''
-
     def die(self):
         self.kill()
         del(self)
@@ -440,10 +456,13 @@ class GameEntity(pygame.sprite.Sprite):
         if(direction.length()>0):
             direction=direction.normalize()
             self.pos+=direction*self.speed
-            '''self.rect.center=self.pos # moved this to update_rect method'''
+            self.rect.center=self.pos
     
     def update_rect(self, camera_pos):
         self.rect.center = self.pos - camera_pos
+        
+    def cam(self, cam):
+        self.rect = self.image.get_rect(center = self.pos - cam)
 
 
 class Player(GameEntity):
@@ -467,6 +486,7 @@ class Turtle(GameEntity):
     def __init__(self, pos):
         super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'turtle.png')), 25, 25, 10, 0)
 
+
 class Treasure(GameEntity):
     def __init__(self, pos, score):
         super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'coin.png')), 1, 1, score, 0)
@@ -477,15 +497,15 @@ class Heart(GameEntity):
 
 class Salamander(GameEntity):
     def __init__(self, pos):
-        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'salamander.png')), 20, 20, 40 , 0.25)        
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'salamander.png')), 10, 10, 40 , 0.20)        
 
 class Eyeball(GameEntity):
     def __init__(self, pos):
-        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'florb.png')), 50, 50, 40 , 0)
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'florb.png')), 20, 20, 10 , 0)
 
 class Ogre(GameEntity):
     def __init__(self, pos):
-        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'ogre.png')), 400, 400, 1000 , 0.05)
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'ogre.png')), 100, 100, 1000 , 0.05)
         
 def start_game():
     world = World()
@@ -617,7 +637,7 @@ def main_menu():
 
 if __name__ == "__main__":
 
-    '''
+    
     start_game()
     '''
     
