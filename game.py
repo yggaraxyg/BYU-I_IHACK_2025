@@ -69,9 +69,9 @@ class World:
 
         self.player_update()
         self.camera()
-    
+      
         self.enemies_update()
-    
+        
         self.sprite_update()
         
         self.weapon_update()
