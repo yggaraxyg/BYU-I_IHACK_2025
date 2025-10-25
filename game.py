@@ -560,9 +560,12 @@ class World:
         game_over_menu = pygame_menu.Menu('', 320, 240, theme=theme)
         game_over_menu.add.label(message, font_size=20, font_color=(255, 0, 0))
         game_over_menu.add.vertical_margin(10)
+#        if(message=="YOU WIN!"):
+#            game_over_menu.add.button("Continue")
         game_over_menu.add.button("Restart", self.restart_game, font_size=15)
         game_over_menu.add.button("Main Menu", self.return_to_main_menu, font_size=15)
         game_over_menu.add.button("Quit", pygame_menu.events.EXIT, font_size=15)
+        
 
         try:
             game_over_menu.mainloop(self._screen)
@@ -682,10 +685,13 @@ class World:
             for enemy in hit_enemies:
                 enemy.hurt(5)
                 if enemy.hp <= 0:
-                    if(random.choice([True,False])):
-                        glob=Heart(enemy.pos, (enemy.score/5))
+                    if(type(enemy)!=Dragon):
+                        if(random.choice([True,False])):
+                            glob=Heart(enemy.pos, (enemy.score/5))
+                        else:
+                            glob=Treasure(enemy.pos, enemy.score)
                     else:
-                        glob=Treasure(enemy.pos, enemy.score)
+                        glob = Treasure(enemy.pos, enemy.score)
                     self.collectable_sprites.add(glob)
                     enemy.die()
         
