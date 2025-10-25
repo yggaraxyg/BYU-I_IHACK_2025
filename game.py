@@ -1263,7 +1263,18 @@ def set_wincondition(numb):
 def set_winquantity(numb):
     global winquantity
     winquantity=int(numb)
+
+def how_to_play():
+    theme = pygame_menu.Theme(background_color=(50, 50, 50, 200),
+                                     title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
     
+    help_menu = pygame_menu.Menu('How to Play', 320, 240, theme=theme)
+    help_menu.add.label("Use WASD to move your character.", font_size=12, font_color=(255, 255, 255))
+    help_menu.add.label("Use Arrow Keys to attack in that direction.", font_size=12, font_color=(255, 255, 255))
+    help_menu.add.label("Press H to get help on a cooldown.", font_size=12, font_color=(255, 255, 255))
+    help_menu.add.label("Answer questions correctly to gain health or score.", font_size=12, font_color=(255, 255, 255))
+
+    return help_menu
     
 def main_menu():
     theme = pygame_menu.Theme(background_color=(0, 0, 0, 0), title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
@@ -1277,17 +1288,19 @@ def main_menu():
     questions_button_image = os.path.join('data', 'sprites', 'questions_button.png')
     
     menu.add.image(logo_image)
-    menu.add.vertical_margin(20)
+    menu.add.vertical_margin(10)
     menu.add.banner(pygame_menu.BaseImage(image_path=play_button_image), lambda: start_game())
     menu.add.vertical_margin(10)
     menu.add.banner(pygame_menu.BaseImage(image_path=questions_button_image), questions_submenu)
+    menu.add.vertical_margin(10)
+    menu.add.button("How to Play", how_to_play(), font_size=10, font_color=(255, 255, 255))
 
     return menu
 
 if __name__ == "__main__":
 
 
-    start_game() # Remove this line before turning in
+    #start_game() # Remove this line before turning in
     
     
     pygame.init()
