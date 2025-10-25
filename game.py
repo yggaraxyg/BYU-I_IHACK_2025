@@ -315,7 +315,6 @@ class World:
         self.player_sprite.update(self.player_relative)
         self.player.update_rect(self.camera_pos)
         self.collision_check()
-        print(self.player.pos)
 
     
     def enemies_update(self):
@@ -1241,7 +1240,7 @@ def main_menu():
 
 if __name__ == "__main__":
 
-    
+    '''
     start_game()
     '''
     
