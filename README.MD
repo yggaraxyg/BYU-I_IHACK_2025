@@ -5,6 +5,10 @@ Knowledge Knights seeks to incorporate studying with gameplay, increasing motiva
 
 ## Required Modules
 ```bash
+pip install -r requirements.txt
+```
+Or if you want to download each individually:
+```bash
 pip install pygame
 pip install pygame-menu
 pip install pytmx
