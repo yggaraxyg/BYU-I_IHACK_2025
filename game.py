@@ -198,11 +198,13 @@ class World:
         else:
             self.player.pos -= self.player.facing * 2
             self.player.pos += (self.knockbackdir / 8)
+
+
         for col in self.collectable_sprites:
             sprite_collision = pygame.sprite.spritecollide(col, self.player_sprite, False)
             if sprite_collision:
                 self.answers+=1
-                delay = pygame.time.get_ticks()
+                shortdelay = pygame.time.get_ticks()
                 if(self.show_question_popup()):
                     self.correct+=1
                     if (abs(col.score)>abs(col.hp)):
@@ -210,7 +212,7 @@ class World:
                     else:
                         self.player.hpmod(col.hp)
                         
-                starttime+=(pygame.time.get_ticks()-delay)
+                starttime+=(pygame.time.get_ticks()-shortdelay)
                 col.die()
                 
                 if((wincondition==1) and (winquantity<=self.correct)):
@@ -309,15 +311,18 @@ class World:
             self.player.velocity.x += self.player.speed * self.dt * self.speedmult
             self.player.facing.x = 1
             self.last_moved= pygame.time.get_ticks()
-        
+
+            shortdelay=pygame.time.get_ticks()
         if self.keys[pygame.K_ESCAPE]:
             pause = pause_menu()
             try:
                 pause.mainloop(self._screen)
             except Exception as e:
                 pass
+            
+            starttime+=(pygame.time.get_ticks()-shortdelay)
 
-        if self.attack_cooldown <= 0:
+            if self.attack_cooldown <= 0:
             if self.keys[pygame.K_UP]:
                 self.attack('up')
                 self.attack_cooldown = 300
