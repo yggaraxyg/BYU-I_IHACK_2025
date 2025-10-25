@@ -173,6 +173,7 @@ class World:
     def collision_check(self):
         global wincondition
         global winquantity
+        global starttime
         sprite_collision = pygame.sprite.spritecollide(self.player, self.enemy_sprites, False)
         
         cooldown_time = 250
