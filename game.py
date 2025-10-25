@@ -44,28 +44,21 @@ class World:
         self.collectable_sprites = pygame.sprite.Group()
         self.player = Player(pygame.Vector2(60,60))
         self.turtle = Turtle(pygame.Vector2(20, 20))
-        #self.salamander = Salamander(pygame.Vector2(100,100))
-        self.eyeball = Eyeball(pygame.Vector2(40,200))
-        #self.ogre = Ogre(pygame.Vector2(200,200))
         self.treasure = Treasure(pygame.Vector2(200,40), 100)
+        self.heart = Heart(pygame.Vector2(200,80), 5)
         self.player_sprite.add(self.player)
         self.enemy_sprites.add(self.turtle)
-        #self.enemy_sprites.add(self.salamander)
-        self.enemy_sprites.add(self.eyeball)
-        #self.enemy_sprites.add(self.ogre)
         self.collectable_sprites.add(self.treasure)
+        self.collectable_sprites.add(self.heart)
         self.last_hit_time = 0
         self.map = pytmx.load_pygame(os.path.join('data', 'maps', 'map1.tmx'))
         self.map_pwidth = self.map.width * 16
         self.map_pheight = self.map.height * 16
+        self.last_spawn = 0
         self.cameralock = pygame.Vector2(1,1)
         self.collisionmap()
-    def on_event(self, event):
-        if event.type == pygame.QUIT:
-            self._running = False
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_t:
-                self.show_question_popup()
+        self.weapon_sprites = pygame.sprite.Group()
+        self.attack_cooldown = 0
 
     def on_loop(self):
         self.get_input()
@@ -78,9 +71,13 @@ class World:
         
         self.sprite_update()
         
-        
+        self.weapon_update()
         self.kill()
         self.dt = self.clock.tick(60)
+ 
+        if ((pygame.time.get_ticks()-self.last_spawn)>1000):
+            self.last_spawn = pygame.time.get_ticks()
+            self.spawn_random()
         pass
 
     def on_render(self):
@@ -99,6 +96,10 @@ class World:
         self.player_sprite.draw(self._screen)
         self.enemy_sprites.draw(self._screen)
         self.collectable_sprites.draw(self._screen)
+        self.weapon_sprites.draw(self._screen)  # Add this line
+        font = pygame.font.SysFont("Courier", 12)
+        text_surface = font.render(f"Score: {self.player.score} HP: {self.player.hp}", True, (150, 150, 150))
+        self._screen.blit(text_surface, (10, 10))
         pygame.display.flip()
 
     def on_cleanup(self):
@@ -116,20 +117,22 @@ class World:
         self.on_cleanup()
 
     def player_update(self):
-
         self.player_relative = self.player.pos - self.camera_pos
         self.player_sprite.update(self.player_relative)
         self.collision_check()
 
     
     def enemies_update(self):
-    
         for enemy in self.enemy_sprites:
 
-          
             enemy.move_towards(self.camera_move)
             enemy.cam(self.camera_pos)
 
+    def spawn_random(self):
+        etypes = [Salamander, Salamander, Salamander, Eyeball, Eyeball, Eyeball, Ogre]
+        self.spawn = random.choice(etypes)(pygame.Vector2(random.randint(0,768),random.randint(0,1152)))
+        self.enemy_sprites.add(self.spawn)
+            
         
     def camera(self):
         self.cameralock = pygame.Vector2(1,1)
@@ -160,7 +163,10 @@ class World:
         current_time = pygame.time.get_ticks()
         if current_time - self.last_hit_time >= cooldown_time:
             if sprite_collision:
+                #print(type(sprite_collision[0]))
                 self.last_hit_time = current_time
+                if(type(sprite_collision[0])==Ogre):
+                    self.player.hurt(2)
                 self.player.hurt(1)
                 self.player.pos -= self.player.facing * 2
         else:
@@ -168,7 +174,12 @@ class World:
         for col in self.collectable_sprites:
             sprite_collision = pygame.sprite.spritecollide(col, self.player_sprite, False)
             if sprite_collision:
-                self.player.score+=col.score
+                if(self.show_question_popup()):
+                    if (abs(col.score)>abs(col.hp)):
+                        self.player.score+=col.score
+                    else:
+                        self.player.hp+=col.hp
+                        
                 col.die()
         self.player.pos.x += self.player.velocity.x
         for tile_rect in self.collision_tiles:
@@ -190,12 +201,49 @@ class World:
     def kill(self):
         if self.player.hp <= 0:
             self.player.kill()
+            self._running = False
+            self.game_over()
+
+    def game_over(self):
+        print("Game Over")
+        theme = pygame_menu.Theme(background_color=(50, 50, 50, 200),
+                                 title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
+        
+        game_over_menu = pygame_menu.Menu('', 320, 240, theme=theme)
+        game_over_menu.add.label("GAME OVER", font_size=20, font_color=(255, 0, 0))
+        game_over_menu.add.vertical_margin(10)
+        game_over_menu.add.button("Restart", self.restart_game, font_size=15)
+        game_over_menu.add.button("Main Menu", self.return_to_main_menu, font_size=15)
+        game_over_menu.add.button("Quit", pygame_menu.events.EXIT, font_size=15)
+
+        try:
+            game_over_menu.mainloop(self._screen)
+        except Exception as e:
+            pass
+
+    def restart_game(self):
+        start_game()
+
+    def return_to_main_menu(self):
+        menu = main_menu()
+
+        try:
+            menu.mainloop(screen)
+        except Exception as e:
+            pass
+        finally:
+            pygame.quit()
+            sys.exit()
 
     def get_input(self):
         self.keys = pygame.key.get_pressed()
         self.player.velocity = pygame.Vector2(0,0)
         prev_facing = self.player.facing
         self.player.facing = pygame.Vector2(0,0)
+        
+        if self.attack_cooldown > 0:
+            self.attack_cooldown -= self.dt
+        
         if self.keys[pygame.K_LSHIFT]:
             self.speedmult=2
         else:
@@ -212,8 +260,72 @@ class World:
         if self.keys[pygame.K_d]:
             self.player.velocity.x += self.player.speed * self.dt * self.speedmult
             self.player.facing.x = 1
+        
+        if self.attack_cooldown <= 0:
+            if self.keys[pygame.K_UP]:
+                self.attack('up')
+                self.attack_cooldown = 300
+            elif self.keys[pygame.K_DOWN]:
+                self.attack('down')
+                self.attack_cooldown = 300
+            elif self.keys[pygame.K_LEFT]:
+                self.attack('left')
+                self.attack_cooldown = 300
+            elif self.keys[pygame.K_RIGHT]:
+                self.attack('right')
+                self.attack_cooldown = 300
+        
         if self.player.facing == pygame.Vector2(0,0):
             self.player.facing = prev_facing
+
+    def attack(self, direction):
+        self.weapon_sprites.empty()
+        
+        sword_offset = 20
+        match direction:
+            case 'up':
+                sword_pos = self.player.pos + pygame.Vector2(0, -sword_offset)
+                rotation = 0
+            case 'down':
+                sword_pos = self.player.pos + pygame.Vector2(0, sword_offset)
+                rotation = 180
+            case 'left':
+                sword_pos = self.player.pos + pygame.Vector2(-sword_offset, 0)
+                rotation = 90
+            case 'right':
+                sword_pos = self.player.pos + pygame.Vector2(sword_offset, 0)
+                rotation = 270
+        
+        sword = Weapon(sword_pos, rotation)
+        self.weapon_sprites.add(sword)
+        self.check_weapon_collision()
+
+    def weapon_update(self):
+        for weapon in self.weapon_sprites:
+            weapon_relative = weapon.pos - self.camera_pos
+            weapon.update(weapon_relative)
+
+    def check_weapon_collision(self):
+        for weapon in self.weapon_sprites:
+            hit_enemies = pygame.sprite.spritecollide(weapon, self.enemy_sprites, False)
+            for enemy in hit_enemies:
+                print(f"Hit {enemy.__class__.__name__}")
+                enemy.hurt(5)
+                if enemy.hp <= 0:
+                    self.player.score += enemy.score
+                    enemy.die()
+        
+        pygame.time.set_timer(pygame.USEREVENT + 1, 300)
+
+    def on_event(self, event):
+        if event.type == pygame.QUIT:
+            self._running = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_t:
+                self.show_question_popup()
+        if event.type == pygame.USEREVENT + 1:
+            self.weapon_sprites.empty()
+            pygame.time.set_timer(pygame.USEREVENT + 1, 0)
 
     def collisionmap(self):
             self.collision_tiles = []
@@ -240,6 +352,8 @@ class World:
         answer4 = question_set[4]
         correct_answer_index = question_set[5]
         
+        self.question_result = None
+
         question_theme = pygame_menu.Theme(
             background_color=(50, 50, 50, 200),
             title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE
@@ -254,16 +368,17 @@ class World:
         self.question_menu.add.button(f"C) {answer3}", lambda: self.answer_question(2, correct_answer_index, self.question_menu), font_size=10)
         self.question_menu.add.button(f"D) {answer4}", lambda: self.answer_question(3, correct_answer_index, self.question_menu), font_size=10)
         
-        # Show the menu
         self.question_menu.mainloop(self._screen)
+
+        return self.question_result
 
     def answer_question(self, selected_answer, correct_answer, menu):
         if selected_answer == correct_answer:
             print("correct")
-            # Eventually give player loot they picked up; for now just heal 1 HP
-            self.player.hpmod(1)
+            self.question_result = True
         else:
             print("wrong")
+            self.question_result = False
             
         menu.disable()
         menu._close()
@@ -326,6 +441,7 @@ class GameEntity(pygame.sprite.Sprite):
 
     def die(self):
         self.kill()
+        del(self)
 
     def move_towards(self, pos):
         direction = pos-self.pos
@@ -340,6 +456,16 @@ class GameEntity(pygame.sprite.Sprite):
 class Player(GameEntity):
     def __init__(self, pos):
         super().__init__(pos, pygame.image.load(os.path.join('data', 'sprites', 'player.png')), 10, 10, 0, 0.1)
+    
+    def update(self, pos):
+        self.rect = self.image.get_rect(center = pos)
+
+class Weapon(GameEntity):
+    def __init__(self, pos, rotation=0):
+        sprite_image = pygame.image.load(os.path.join('data', 'sprites', 'sword.png'))
+        rotated_image = pygame.transform.rotate(sprite_image, rotation)
+        super().__init__(pos, rotated_image, 1, 1, 0, 0)
+        self.rotation = rotation
     
     def update(self, pos):
         self.rect = self.image.get_rect(center = pos)
@@ -431,12 +557,13 @@ def create_manual_menu():
                                      title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
     
     manual_menu = pygame_menu.Menu('Manual Input', 320, 240, theme=theme)
-
+    global question_list
     question_list = []  # Clear existing questions
     question_input = manual_menu.add.text_input("Question: ", default="", font_size=11)
     answer_input = manual_menu.add.text_input("Correct Answer: ", default="", font_size=11)
     
     def handle_manual_input():
+        global question_list
         question_text = question_input.get_value()
         answer_text = answer_input.get_value()
         wrong1_text = wrong1_input.get_value()
@@ -476,18 +603,11 @@ def create_manual_menu():
 
     return manual_menu
 
-if __name__ == "__main__":
-    '''
-    start_game()
-    '''
-    
-    pygame.init()
-    screen = pygame.display.set_mode((320, 240), pygame.RESIZABLE | pygame.SCALED)
 
-    custom_theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
-                                     title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
+def main_menu():
+    theme = pygame_menu.Theme(background_color=(0, 0, 0, 0), title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
     
-    menu = pygame_menu.Menu('', 320, 240, theme=custom_theme)
+    menu = pygame_menu.Menu('', 320, 240, theme=theme)
     
     questions_submenu = create_questions_menu()
     
@@ -501,6 +621,19 @@ if __name__ == "__main__":
     menu.add.vertical_margin(10)
     menu.add.banner(pygame_menu.BaseImage(image_path=questions_button_image), questions_submenu)
 
+    return menu
+
+if __name__ == "__main__":
+
+    '''
+    start_game()
+    '''
+    
+    pygame.init()
+    screen = pygame.display.set_mode((320, 240), pygame.RESIZABLE | pygame.SCALED)
+
+    menu = main_menu()
+
     try:
         menu.mainloop(screen)
     except Exception as e:
@@ -508,3 +641,4 @@ if __name__ == "__main__":
     finally:
         pygame.quit()
         sys.exit()
+    #'''
