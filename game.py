@@ -26,7 +26,7 @@ class World:
         self.setup()
 
     def setup(self):
-        self.camera_pos = pygame.Vector2(0,0)
+        self.camera_pos = pygame.Vector2(-0.5 * self.width,-0.5 * self.height)
         self.player_pos = pygame.Vector2(60,60)
         self.player_image = pygame.image.load(os.path.join('data', 'sprites', 'player.png'))
         self.turtle_image = pygame.image.load(os.path.join('data', 'sprites', 'turtle.png'))
@@ -40,6 +40,9 @@ class World:
         self.player_sprite.add(self.player)
         self.last_hit_time = 0
         self.player_facing = pygame.Vector2(0,0)
+        self.map = pytmx.load_pygame(os.path.join('data', 'maps', 'map1.tmx'))
+        self.map_pwidth = self.map.width * 16
+        self.map_pheight = self.map.width * 16
 
     def on_event(self, event):
         if event.type == pygame.QUIT:
@@ -48,15 +51,25 @@ class World:
     def on_loop(self):
         self.get_input()
         self.player_update()
+        self.camera()
         self.enemies_update()
         self.sprite_update()
-
+        
         self.kill()
         self.dt = self.clock.tick(60)
         pass
 
     def on_render(self):
         self._screen.fill((0,0,0))
+        for row in range(self.map.width):
+            for column in range (self.map.height):
+                self.mapdisplay = pygame.Vector2(row * 16, column * 16) - self.camera_pos
+                try:
+                    tile = self.map.get_tile_image(row, column, 0)
+                except:
+                    pass
+                if tile:
+                    self._screen.blit(tile, self.mapdisplay)
         self.player_sprite.draw(self._screen)
         self.enemy_sprites.draw(self._screen)
         pygame.display.flip()
@@ -76,13 +89,24 @@ class World:
 
     def player_update(self):
         self.player_pos = self.player_pos + self.velocity
-        self.player_sprite.update(self.player_pos)
+        self.player_sprite.update(self.player_pos - self.camera_pos)
         self.collision_check()
 
     
     def enemies_update(self):
         pass
 
+        
+    def camera(self):
+        self.camera_pos = self.camera_pos + self.velocity
+        if self.camera_pos.x <= 0:
+            self.camera_pos.x = 0
+        if self.camera_pos.y <= 0:
+            self.camera_pos.y = 0
+        if self.camera_pos.x >= self.map_pwidth - self.width:
+            self.camera_pos.x = self.map_pwidth - self.width
+        if self.camera_pos.y >= self.map_pheight - self.height:
+            self.camera_pos.y = self.map_pheight - self.height
 
     def sprite_update(self):
         pass
