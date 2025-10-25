@@ -14,19 +14,17 @@ pip install pathfinding
 ## Controls
 
 **General:**
-- WASD - move around
-- Left Shift - move twice as fast
-- Arrow keys - attack in direction pressed
+- WASD - move around <br />
+- Left Shift - move twice as fast <br />
+- Arrow keys - attack in direction pressed <br />
 - H - receive help (on cooldown)
 
 **Interface:**
-Escape - pause game
-Arrow keys - select option in menu
+Escape - pause game <br />
+Arrow keys - select option in menu <br />
 Enter - choose selected option
 
 ## Credits / Thanks
-BYU-I for holding the hackathon
-
-Developers - Alice Rygg, Elliott VanOrman, Nathan Murray, Tristan Zatylny
-
+BYU-I for holding the hackathon <br />
+Developers - Alice Rygg, Elliott VanOrman, Nathan Murray, Tristan Zatylny <br />
 All of the authors of libraries used
