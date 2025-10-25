@@ -31,8 +31,8 @@ def create_pathfinding_grid(collision_map, map_width, map_height):
     
     return Grid(matrix=matrix)
 
-def find_path_with_library(start_pos, goal_pos, collision_map, map_width, map_height):
-    """Find path using pathfinding library"""
+def find_path_with_library(start_pos, goal_pos, collision_map, map_width, map_height, cached_grid=None):
+    """Find path using pathfinding library with caching"""
     try:
         # Convert world positions to grid coordinates
         start_x = max(0, min(int(start_pos.x // 16), map_width - 1))
@@ -40,14 +40,22 @@ def find_path_with_library(start_pos, goal_pos, collision_map, map_width, map_he
         goal_x = max(0, min(int(goal_pos.x // 16), map_width - 1))
         goal_y = max(0, min(int(goal_pos.y // 16), map_height - 1))
         
-        # Double check bounds (shouldn't be necessary but extra safety)
+        # Quick distance check - don't pathfind for very distant targets
+        distance = abs(goal_x - start_x) + abs(goal_y - start_y)
+        if distance > 25:  # Limit pathfinding distance
+            return []
+        
+        # Double check bounds
         if not (0 <= start_x < map_width and 0 <= start_y < map_height):
             return []
         if not (0 <= goal_x < map_width and 0 <= goal_y < map_height):
             return []
         
-        # Create grid
-        grid = create_pathfinding_grid(collision_map, map_width, map_height)
+        # Use cached grid if available, otherwise create new one
+        if cached_grid is not None:
+            grid = cached_grid.clone()
+        else:
+            grid = create_pathfinding_grid(collision_map, map_width, map_height)
         
         # Get start and end nodes
         start_node = grid.node(start_x, start_y)
@@ -136,6 +144,10 @@ class World:
         self.correct=0
         self.answers=0;
         self.knockbackdir = pygame.Vector2(0,0)
+        
+        # Performance optimization variables
+        self.pathfinding_frame_counter = 0
+        self.max_pathfinding_per_frame = 2  # Limit pathfinding calculations per frame
 
     def create_pathfinding_map(self):
         """Create a 2D grid for pathfinding that matches player collision detection"""
@@ -162,6 +174,9 @@ class World:
         player_x = max(0, min(int(self.player.pos.x // 16), self.map.width - 1))
         player_y = max(0, min(int(self.player.pos.y // 16), self.map.height - 1))
         player_blocked = self.collision_grid.get((player_x, player_y), False)
+        
+        # Cache the pathfinding grid for performance
+        self.cached_pathfinding_grid = create_pathfinding_grid(self.collision_grid, self.map.width, self.map.height)
     
     def on_loop(self):
         self.get_input()
@@ -173,21 +188,23 @@ class World:
         self.kill()
         self.dt = self.clock.tick(60)
 
-        # Limit total number of enemies for performance
-        MAX_ENEMIES = 20
+        # Optimize enemy management for performance
+        MAX_ENEMIES = 12  # Reduced from 20
         current_enemy_count = len(self.enemy_sprites)
 
         if current_enemy_count < MAX_ENEMIES:
             if((pygame.time.get_ticks()-self.last_moved)>20000):
-                delay = 200
+                delay = 500  # Increased delay when stationary
             else:
-                delay = 2000           
+                delay = 3000  # Increased delay when moving
         
             if ((pygame.time.get_ticks()-self.last_spawn)>delay):
                 self.last_spawn = pygame.time.get_ticks()
                 self.spawn_random()
         
-        # Remove distant enemies to keep count manageable
+        # More aggressive culling of distant enemies
+        if current_enemy_count > 8:
+            self.cull_distant_enemies()
         if current_enemy_count > MAX_ENEMIES:
             self.cull_distant_enemies()
 
@@ -196,13 +213,15 @@ class World:
         enemies_to_remove = []
         for enemy in self.enemy_sprites:
             distance = (self.player.pos - enemy.pos).length()
-            if distance > 500:  # Remove enemies more than 500 pixels away
+            if distance > 350:  # Reduced distance threshold for more aggressive culling
                 enemies_to_remove.append(enemy)
         
         # Remove the most distant enemies
         if enemies_to_remove:
             enemies_to_remove.sort(key=lambda e: (self.player.pos - e.pos).length(), reverse=True)
-            for enemy in enemies_to_remove[:len(enemies_to_remove)//2]:  # Remove half of distant enemies
+            # Remove more enemies when performance is needed
+            remove_count = min(len(enemies_to_remove), max(1, len(enemies_to_remove) // 2))
+            for enemy in enemies_to_remove[:remove_count]:
                 enemy.kill()
 
     def on_render(self):
@@ -223,18 +242,20 @@ class World:
                 if tile:
                     self._screen.blit(tile, self.mapdisplay)
         
-        # Debug: Draw collision grid (press C to toggle)
+        # Optimized debug rendering - only render what's visible
         if getattr(self, 'show_collision_debug', False):
-            for (x, y), blocked in self.collision_grid.items():
-                if blocked:
-                    screen_x = x * 16 - self.camera_pos.x
-                    screen_y = y * 16 - self.camera_pos.y
-                    if -16 <= screen_x <= self.width and -16 <= screen_y <= self.height:
-                        # Create a semi-transparent red surface
-                        collision_surf = pygame.Surface((16, 16))
-                        collision_surf.set_alpha(100)
-                        collision_surf.fill((255, 0, 0))
-                        self._screen.blit(collision_surf, (screen_x, screen_y))
+            # Only render collision tiles in view
+            start_x = max(0, int(self.camera_pos.x // 16) - 1)
+            end_x = min(self.map.width, int((self.camera_pos.x + self.width) // 16) + 2)
+            start_y = max(0, int(self.camera_pos.y // 16) - 1)
+            end_y = min(self.map.height, int((self.camera_pos.y + self.height) // 16) + 2)
+            
+            for x in range(start_x, end_x):
+                for y in range(start_y, end_y):
+                    if self.collision_grid.get((x, y), False):
+                        screen_x = x * 16 - self.camera_pos.x
+                        screen_y = y * 16 - self.camera_pos.y
+                        pygame.draw.rect(self._screen, (255, 0, 0, 100), (screen_x, screen_y, 16, 16))
         
         # Debug: Draw enemy paths (press P to toggle)
         if getattr(self, 'show_path_debug', False):
@@ -291,23 +312,45 @@ class World:
 
     
     def enemies_update(self):
+        self.pathfinding_frame_counter = 0  # Reset counter each frame
+        
+        # Calculate distances for all enemies
+        enemy_distances = []
         for enemy in self.enemy_sprites:
-            # All enemies should use collision-aware movement
-            if isinstance(enemy, (Ogre, Salamander)):
-                # Smart enemies use full pathfinding with the library
+            distance = (self.player.pos - enemy.pos).length()
+            enemy_distances.append((distance, enemy))
+        
+        # Sort by distance - prioritize closer enemies
+        enemy_distances.sort(key=lambda x: x[0])
+        
+        for i, (distance, enemy) in enumerate(enemy_distances):
+            # Skip very distant enemies more frequently
+            if distance > 300 and i % 4 != 0:  # Only update 1/4 of distant enemies per frame
+                continue
+            
+            # Limit pathfinding calculations per frame
+            use_pathfinding = (isinstance(enemy, (Ogre, Salamander)) and 
+                             distance < 200 and 
+                             self.pathfinding_frame_counter < self.max_pathfinding_per_frame)
+            
+            if use_pathfinding:
+                self.pathfinding_frame_counter += 1
                 enemy.move_towards_with_pathfinding(
                     self.player.pos, 
                     self.collision_grid, 
                     self.map.width, 
-                    self.map.height
+                    self.map.height,
+                    self.cached_pathfinding_grid
                 )
-            else:
-                # Simple enemies use collision-aware direct movement
+            elif distance < 250:
+                # Medium distance enemies get collision-aware movement
                 if hasattr(enemy, 'move_towards_with_collision_check'):
                     enemy.move_towards_with_collision_check(self.player.pos, self.collision_grid)
                 else:
-                    # Fallback for enemies without collision checking
                     enemy.move_towards(self.player.pos)
+            else:
+                # Distant enemies get simple movement
+                enemy.move_towards(self.player.pos)
             
             enemy.update_sprite(self.player.pos - enemy.pos)
             enemy.update_rect(self.camera_pos)
@@ -317,8 +360,8 @@ class World:
         etypes = [Salamander, Salamander, Salamander, Salamander, Salamander, Eyeball, Eyeball, Eyeball, Eyeball, Eyeball, Ogre]
         
         # Find a valid spawn position (not in a wall and not too close to player)
-        max_attempts = 100
-        min_distance_from_player = 64  # At least 64 pixels away from player
+        max_attempts = 50  # Reduced from 100 for better performance
+        min_distance_from_player = 80  # Increased minimum distance
         
         for attempt in range(max_attempts):
             # Generate random position in world coordinates (with safety margins)
@@ -686,11 +729,9 @@ class World:
         question_set = self.current_question_set
         correct_answer_text = question_set[correct_answer + 1]
         if selected_answer == correct_answer:
-            print("correct")
             self.question_feedback(True)
             self.question_result = True
         else:
-            print("wrong")
             self.question_feedback(False, correct_answer_text)
             self.question_result = False
             
@@ -729,11 +770,11 @@ class GameEntity(pygame.sprite.Sprite):
         self.facing = pygame.Vector2(0,0)
         self.cords = [pos.x, pos.y]
         
-        # Pathfinding attributes
+        # Pathfinding attributes - optimized for performance
         self.path = []
         self.path_index = 0
         self.last_pathfind_time = 0
-        self.pathfind_cooldown = 500  # Recalculate path every 500ms
+        self.pathfind_cooldown = random.randint(600, 1000)  # Spread out pathfinding calculations
 
     def hpmod(self, num):
         self.hp+=num
@@ -779,7 +820,7 @@ class GameEntity(pygame.sprite.Sprite):
         self.kill()
         del(self)
 
-    def move_towards_with_pathfinding(self, target_pos, collision_grid, map_width, map_height):
+    def move_towards_with_pathfinding(self, target_pos, collision_grid, map_width, map_height, cached_grid=None):
         """Move towards target using pathfinding library"""
         current_time = pygame.time.get_ticks()
         
@@ -787,7 +828,7 @@ class GameEntity(pygame.sprite.Sprite):
         if (current_time - self.last_pathfind_time > self.pathfind_cooldown or 
             not self.path or self.path_index >= len(self.path)):
             
-            self.path = find_path_with_library(self.pos, target_pos, collision_grid, map_width, map_height)
+            self.path = find_path_with_library(self.pos, target_pos, collision_grid, map_width, map_height, cached_grid)
             self.path_index = 0
             self.last_pathfind_time = current_time
         
