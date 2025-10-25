@@ -389,9 +389,6 @@ class World:
     def on_event(self, event):
         if event.type == pygame.QUIT:
             self._running = False
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_t:
-                self.show_question_popup()
         if event.type == pygame.USEREVENT + 1:
             self.weapon_sprites.empty()
             pygame.time.set_timer(pygame.USEREVENT + 1, 0)
