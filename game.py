@@ -287,6 +287,13 @@ class World:
             self.player.facing.x = 1
             self.last_moved= pygame.time.get_ticks()
         
+        if self.keys[pygame.K_ESCAPE]:
+            pause = pause_menu()
+            try:
+                pause.mainloop(self._screen)
+            except Exception as e:
+                pass
+
         if self.attack_cooldown <= 0:
             if self.keys[pygame.K_UP]:
                 self.attack('up')
@@ -415,8 +422,7 @@ class World:
             self.question_feedback(False, correct_answer_text)
             self.question_result = False
             
-        menu.disable()
-        menu._close()
+        exit_menu(menu)
     
     def question_feedback(self, correct, correct_answer=None):
         feedback_theme = pygame_menu.Theme(
@@ -432,7 +438,7 @@ class World:
             feedback_menu.add.label(f"Incorrect. The answer was {correct_answer}.", font_size=13, font_color=(255, 0, 0), align=pygame_menu.locals.ALIGN_CENTER)
         
         feedback_menu.add.vertical_margin(10)
-        feedback_menu.add.button("Continue", feedback_menu.disable, font_size=15)
+        feedback_menu.add.button("Continue", lambda: exit_menu(feedback_menu), font_size=15)
         
         feedback_menu.mainloop(self._screen)
 
@@ -659,6 +665,24 @@ def create_manual_menu():
 
     return manual_menu
 
+def pause_menu():
+    theme = pygame_menu.Theme(background_color=(50, 50, 50, 200),
+                                     title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
+    
+    manual_menu = create_manual_menu()
+    
+    pause_menu = pygame_menu.Menu('', 320, 240, theme=theme)
+    pause_menu.add.label("Paused", font_size=20, font_color=(255, 255, 255))
+    pause_menu.add.vertical_margin(10)
+    pause_menu.add.button("Resume", lambda: exit_menu(pause_menu), font_size=15)
+    pause_menu.add.button("Add Questions", manual_menu, font_size=15)
+    pause_menu.add.button("Quit", pygame_menu.events.EXIT, font_size=15)
+
+    return pause_menu
+
+def exit_menu(menu):
+    menu.disable()
+    menu._close()
 
 def main_menu():
     theme = pygame_menu.Theme(background_color=(0, 0, 0, 0), title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
@@ -681,7 +705,7 @@ def main_menu():
 
 if __name__ == "__main__":
 
-    
+    '''
     start_game()
     '''
     
