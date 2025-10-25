@@ -5,6 +5,11 @@ import random
 import pygame_menu
 import pytmx
 from pytmx.util_pygame import load_pygame
+import tkinter
+from tkinter import filedialog
+from questionbackend import *
+
+question_list = []
 
 class World:
     def __init__(self):
@@ -22,19 +27,16 @@ class World:
 
     def setup(self):
         self.camera_pos = pygame.Vector2(-0.5 * self.width,-0.5 * self.height)
-        self.player_pos = pygame.Vector2(60,60)
-        self.player_image = pygame.image.load(os.path.join('data', 'sprites', 'player.png'))
-        self.turtle_image = pygame.image.load(os.path.join('data', 'sprites', 'turtle.png'))
         self.player_sprite = pygame.sprite.GroupSingle()
         self.enemy_sprites = pygame.sprite.Group()
-        self.player_health = 10
-        self.player = Player(self.player_pos, self.player_image)
-        self.turtle_pos = pygame.Vector2(20, 20)
-        self.turtle = Turtle(self.turtle_pos, self.turtle_image)
-        self.enemy_sprites.add(self.turtle)
+        self.collectable_sprites = pygame.sprite.Group()
+        self.player = Player(pygame.Vector2(60,60))
+        self.turtle = Turtle(pygame.Vector2(20, 20))
+        self.salamander = Salamander(pygame.Vector2(100,100))
         self.player_sprite.add(self.player)
+        self.enemy_sprites.add(self.turtle)
+        self.enemy_sprites.add(self.salamander)
         self.last_hit_time = 0
-        self.player_facing = pygame.Vector2(0,0)
         self.map = pytmx.load_pygame(os.path.join('data', 'maps', 'map1.tmx'))
         self.map_pwidth = self.map.width * 16
         self.map_pheight = self.map.height * 16
@@ -83,13 +85,14 @@ class World:
         self.on_cleanup()
 
     def player_update(self):
-        self.player_pos = self.player_pos + self.velocity
-        self.player_sprite.update(self.player_pos - self.camera_pos)
+        self.player.pos = self.player.pos + self.velocity
+        self.player_sprite.update(self.player.pos - self.camera_pos)
         self.collision_check()
 
     
     def enemies_update(self):
-        pass
+        for enemy in self.enemy_sprites:
+            enemy.move_towards(self.player.pos)
 
         
     def camera(self):
@@ -113,64 +116,170 @@ class World:
         if current_time - self.last_hit_time >= cooldown_time:
             if sprite_collision:
                 self.last_hit_time = current_time
-                self.player_health -= 1
-                self.player_pos -= self.player_facing * 2
+                self.player.hurt(1)
+                self.player.pos -= self.player.facing * 2
         else:
-            self.player_pos -= self.player_facing * 2
+            self.player.pos -= self.player.facing * 2
+        sprite_collision = pygame.sprite.spritecollide(self.player, self.collectable_sprites, False)
+        
     
     def kill(self):
-        if self.player_health <= 0:
+        if self.player.hp <= 0:
             self.player.kill()
 
     def get_input(self):
         self.keys = pygame.key.get_pressed()
-        self.speed = 0.1
-        self.velocity = pygame.Vector2(0,0)
-        prev_facing = self.player_facing
-        self.player_facing = pygame.Vector2(0,0)
+        self.player.velocity = pygame.Vector2(0,0)
+        prev_facing = self.player.facing
+        self.player.facing = pygame.Vector2(0,0)
         if self.keys[pygame.K_LSHIFT]:
-            self.speed = self.speed * 2
+            self.speedmult=2
+        else:
+            self.speedmult=1
         if self.keys[pygame.K_w]:
-            self.velocity.y -= self.speed * self.dt
-            self.player_facing.y = -1
+            self.player.velocity.y -= self.player.speed * self.dt * self.speedmult
+            self.player.facing.y = -1
         if self.keys[pygame.K_s]:
-            self.velocity.y += self.speed * self.dt
-            self.player_facing.y = 1
+            self.player.velocity.y += self.player.speed * self.dt * self.speedmult
+            self.player.facing.y = 1
         if self.keys[pygame.K_a]:
-            self.velocity.x -= self.speed * self.dt
-            self.player_facing.x = -1
+            self.player.velocity.x -= self.player.speed * self.dt * self.speedmult
+            self.player.facing.x = -1
         if self.keys[pygame.K_d]:
-            self.velocity.x += self.speed * self.dt
-            self.player_facing.x = 1
-        if self.player_facing == pygame.Vector2(0,0):
-            self.player_facing = prev_facing
+            self.player.velocity.x += self.player.speed * self.dt * self.speedmult
+            self.player.facing.x = 1
+        if self.player.facing == pygame.Vector2(0,0):
+            self.player.facing = prev_facing
 
 
 
 
-
-class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, image):
+class GameEntity(pygame.sprite.Sprite):
+    def __init__(self, pos, image, maxhp, hp, score, speed):
         super().__init__()
         self.image = image
+        self.pos = pos
         self.rect = self.image.get_rect(center = pos)
+        self.maxhp= maxhp
+        self.hp = hp
+        self.score = score
+        self.speed = speed
+        self.velocity = 0
+        self.facing = pygame.Vector2(0,0)
+
+    def hpmod(self, num):
+        self.hp+=num
+        if (self.hp>=self.maxhp):
+            self.hp=self.maxhp
+        if (self.hp<=0):
+            self.die()
+
+    def heal(num):
+        self.hpmod(num)
+
+    def hurt(self,num):
+        self.hpmod(-num)
+
+    def scoremod(self, num):
+        self.score+=num
+
+    def score(self, num):
+        self.scoremod(num)
+
+    def penalize(self, num):
+        self.scoremod(-num)
+
+    def getscore(self):
+        return self.score
+
+    def gethp(self):
+        return self.hp
+
+    def getx(self):
+        return self.cords[0]
+
+    def gety(self):
+        return self.cords[1]
+
+    def setx(self, x):
+        self.cords[0]=x
+
+    def sety(self, y):
+        self.cords[1]=y
+
+    def die(self):
+        self.kill
+
+    def move_towards(self, pos):
+        direction = pos-self.pos
+        if(direction.length()>0):
+            direction=direction.normalize()
+            self.pos+=direction*self.speed
+            self.rect.center=self.pos
+
+
+class Player(GameEntity):
+    def __init__(self, pos):
+        super().__init__(pos, pygame.image.load(os.path.join('data', 'sprites', 'player.png')), 10, 10, 0, 0.1)
     
     def update(self, pos):
         self.rect = self.image.get_rect(center = pos)
 
-class Turtle(pygame.sprite.Sprite):
-    def __init__(self, pos, image):
-        super().__init__()
-        self.image = image
-        self.rect = self.image.get_rect(center = pos)
+class Turtle(GameEntity):
+    def __init__(self, pos):
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'turtle.png')), 25, 25, 10, 0)
 
+class Treasure(GameEntity):
+    def __init__(self, pos, score):
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'coin.png')), 1, 1, score, 0)
+
+class Heart(GameEntity):
+    def __init__(self, pos, hp):
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'heart.png')), hp, hp, 0 ,0)
+
+class Salamander(GameEntity):
+    def __init__(self, pos):
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'salamander.png')), 20, 20, 40 , 0.25)        
+        
 def start_game():
     world = World()
     world.on_execute()
 
-def show_questions():
-    print("If only this did something")
-    pass # Todo
+def manual_input():
+    # Manual input function for custom questions
+    print("todo")
+    pass
+
+def choose_default():
+    # Select between default csv files
+    print("todo")
+    pass
+
+def user_csv():
+    # Load user csv file
+    root = tkinter.Tk()
+    root.withdraw()
+    file_path = filedialog.askopenfilename(title="Select CSV File", filetypes=[("CSV files", "*.csv")])
+    if file_path:
+        print(f"Selected file: {file_path}")
+        question_list = questionbox().getFromCSV(file_path)
+        print(question_list)
+    else:
+        print("No file selected.")
+    
+    root.destroy()    
+
+def create_questions_menu():
+    theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
+                                     title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
+    
+    question_menu = pygame_menu.Menu('Manage ?s', 320, 240, theme=theme)
+
+    question_menu.add.button("Manual Input", manual_input, font_size=15)
+    question_menu.add.button("Choose Default CSV", choose_default, font_size=15)
+    question_menu.add.button("Load User CSV", user_csv, font_size=15)
+
+    return question_menu
 
 if __name__ == "__main__":
     pygame.init()
@@ -181,6 +290,9 @@ if __name__ == "__main__":
     
     menu = pygame_menu.Menu('', 320, 240, theme=custom_theme)
     
+    # Create the questions submenu
+    questions_submenu = create_questions_menu()
+    
     logo_image = os.path.join('data', 'sprites', 'logo.png')
     play_button_image = os.path.join('data', 'sprites', 'play_button.png')
     questions_button_image = os.path.join('data', 'sprites', 'questions_button.png')
@@ -189,6 +301,6 @@ if __name__ == "__main__":
     menu.add.vertical_margin(20)
     menu.add.banner(pygame_menu.BaseImage(image_path=play_button_image), start_game)
     menu.add.vertical_margin(10)
-    menu.add.banner(pygame_menu.BaseImage(image_path=questions_button_image), show_questions)
+    menu.add.banner(pygame_menu.BaseImage(image_path=questions_button_image), questions_submenu)
 
     menu.mainloop(screen)

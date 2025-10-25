@@ -13,6 +13,7 @@ output_array = []
 
 # csv parser function
 def parse_csv(input_csv):
+    '''Parses a CSV file and returns an array of arrays'''
     with open(input_csv, newline='') as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
@@ -20,3 +21,4 @@ def parse_csv(input_csv):
             if [cell.lower() for cell in row] == ['question', 'answer']:
                 continue
             output_array.append(row)
+    return output_array
