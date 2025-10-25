@@ -60,16 +60,19 @@ class World:
         self.collisionmap()
         self.weapon_sprites = pygame.sprite.Group()
         self.attack_cooldown = 0
+        self.correct=0
+        self.answers=0;
+        self.knockbackdir = pygame.Vector2(0,0)
 
     def on_loop(self):
         self.get_input()
 
-        self.player_update()
-        self.camera()
+            self.player_update()
+            self.camera()
       
-        self.enemies_update()
+            self.enemies_update()
         
-        self.sprite_update()
+            self.sprite_update()
         
         self.weapon_update()
         self.kill()
@@ -103,8 +106,8 @@ class World:
         self.enemy_sprites.draw(self._screen)
         self.collectable_sprites.draw(self._screen)
         self.weapon_sprites.draw(self._screen)  # Add this line
-        font = pygame.font.SysFont("Courier", 12)
-        text_surface = font.render(f"Score: {self.player.score} HP: {self.player.hp}", True, (150, 150, 150))
+        font = pygame.font.SysFont("Courier", 11)
+        text_surface = font.render(f"Score:{self.player.score} HP:{self.player.hp} Time:{(pygame.time.get_ticks()/1000):.2f}s Correct:{self.correct}/{self.answers}", True, (150, 150, 150))
         self._screen.blit(text_surface, (10, 10))
         pygame.display.flip()
 
@@ -165,22 +168,35 @@ class World:
 
     def collision_check(self):
         sprite_collision = pygame.sprite.spritecollide(self.player, self.enemy_sprites, False)
+        
         cooldown_time = 250
         current_time = pygame.time.get_ticks()
         if current_time - self.last_hit_time >= cooldown_time:
             if sprite_collision:
+                for enemy in self.enemy_sprites:
+                    if pygame.sprite.collide_rect(enemy, self.player):
+                        
+                        self.knockbackdir = self.player.pos - enemy.pos
+                        #print (str(knockbackdir))
+                        
                 #print(type(sprite_collision[0]))
                 self.last_hit_time = current_time
                 if(type(sprite_collision[0])==Ogre):
                     self.player.hurt(2)
                 self.player.hurt(1)
-                self.player.pos -= self.player.facing * 2
+                try:
+                    self.player.pos += (self.knockbackdir / 4)
+                except Exception as e:
+                    print (e)
         else:
             self.player.pos -= self.player.facing * 2
+            self.player.pos += (self.knockbackdir / 8)
         for col in self.collectable_sprites:
             sprite_collision = pygame.sprite.spritecollide(col, self.player_sprite, False)
             if sprite_collision:
+                self.answers+=1
                 if(self.show_question_popup()):
+                    self.correct+=1
                     if (abs(col.score)>abs(col.hp)):
                         self.player.score+=col.score
                     else:
@@ -321,7 +337,11 @@ class World:
             for enemy in hit_enemies:
                 enemy.hurt(5)
                 if enemy.hp <= 0:
-                    self.player.score += enemy.score
+                    if(random.choice([True,False])):
+                        glob=Heart(enemy.pos, (enemy.score/5))
+                    else:
+                        glob=Treasure(enemy.pos, enemy.score)
+                    self.collectable_sprites.add(glob)
                     enemy.die()
         
         pygame.time.set_timer(pygame.USEREVENT + 1, 300)
