@@ -60,6 +60,8 @@ class World:
         self.collisionmap()
         self.weapon_sprites = pygame.sprite.Group()
         self.attack_cooldown = 0
+        self.correct=0
+        self.answers=0;
 
     def on_loop(self):
         self.get_input()
@@ -104,7 +106,7 @@ class World:
         self.collectable_sprites.draw(self._screen)
         self.weapon_sprites.draw(self._screen)  # Add this line
         font = pygame.font.SysFont("Courier", 12)
-        text_surface = font.render(f"Score: {self.player.score} HP: {self.player.hp}", True, (150, 150, 150))
+        text_surface = font.render(f"Score: {self.player.score} HP: {self.player.hp} Time:{(pygame.time.get_ticks()/1000):.2f}s Correct: {self.correct}/{self.answers}", True, (150, 150, 150))
         self._screen.blit(text_surface, (10, 10))
         pygame.display.flip()
 
@@ -180,7 +182,9 @@ class World:
         for col in self.collectable_sprites:
             sprite_collision = pygame.sprite.spritecollide(col, self.player_sprite, False)
             if sprite_collision:
+                self.answers+=1
                 if(self.show_question_popup()):
+                    self.correct+=1
                     if (abs(col.score)>abs(col.hp)):
                         self.player.score+=col.score
                     else:
