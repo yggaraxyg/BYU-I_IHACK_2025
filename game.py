@@ -285,12 +285,13 @@ class World:
         self.enemy_sprites.draw(self._screen)
         self.collectable_sprites.draw(self._screen)
         self.weapon_sprites.draw(self._screen)
+        pygame.draw.rect(self._screen, (0,0,0), (0,0,self.width,20))
         
         font = pygame.font.SysFont("Courier", 11)
-        text_surface = font.render(f"Score:{self.player.score} HP:{self.player.hp} Time:{((pygame.time.get_ticks()-starttime)/1000):.2f}s Correct:{self.correct}/{self.answers}", True, (150, 150, 150))
+        text_surface = font.render(f"Score:{self.player.score}  HP:{self.player.hp}  Time:{((pygame.time.get_ticks()-starttime)/1000):.2f}s  Correct:{self.correct}/{self.answers}", False, (150, 150, 150))
         if ((wincondition==3) and (winquantity<=((pygame.time.get_ticks()-starttime)/1000))):
             self.game_over("YOU WIN!")
-        self._screen.blit(text_surface, (10, 10))
+        self._screen.blit(text_surface, (10, 5))
         
         pygame.display.flip()
 
@@ -580,19 +581,6 @@ class World:
         
         if self.attack_cooldown > 0:
             self.attack_cooldown -= self.dt
-        
-        # Debug toggles
-        if self.keys[pygame.K_c] and not getattr(self, 'c_pressed', False):
-            self.show_collision_debug = not getattr(self, 'show_collision_debug', False)
-            self.c_pressed = True
-        elif not self.keys[pygame.K_c]:
-            self.c_pressed = False
-            
-        if self.keys[pygame.K_p] and not getattr(self, 'p_pressed', False):
-            self.show_path_debug = not getattr(self, 'show_path_debug', False)
-            self.p_pressed = True
-        elif not self.keys[pygame.K_p]:
-            self.p_pressed = False
         
         if self.keys[pygame.K_LSHIFT]:
             self.speedmult=2
