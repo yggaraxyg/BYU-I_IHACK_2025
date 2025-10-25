@@ -62,16 +62,17 @@ class World:
         self.attack_cooldown = 0
         self.correct=0
         self.answers=0;
+        self.knockbackdir = pygame.Vector2(0,0)
 
     def on_loop(self):
         self.get_input()
 
-        self.player_update()
-        self.camera()
+            self.player_update()
+            self.camera()
       
-        self.enemies_update()
+            self.enemies_update()
         
-        self.sprite_update()
+            self.sprite_update()
         
         self.weapon_update()
         self.kill()
@@ -167,18 +168,29 @@ class World:
 
     def collision_check(self):
         sprite_collision = pygame.sprite.spritecollide(self.player, self.enemy_sprites, False)
+        
         cooldown_time = 250
         current_time = pygame.time.get_ticks()
         if current_time - self.last_hit_time >= cooldown_time:
             if sprite_collision:
+                for enemy in self.enemy_sprites:
+                    if pygame.sprite.collide_rect(enemy, self.player):
+                        
+                        self.knockbackdir = self.player.pos - enemy.pos
+                        #print (str(knockbackdir))
+                        
                 #print(type(sprite_collision[0]))
                 self.last_hit_time = current_time
                 if(type(sprite_collision[0])==Ogre):
                     self.player.hurt(2)
                 self.player.hurt(1)
-                self.player.pos -= self.player.facing * 2
+                try:
+                    self.player.pos += (self.knockbackdir / 4)
+                except Exception as e:
+                    print (e)
         else:
             self.player.pos -= self.player.facing * 2
+            self.player.pos += (self.knockbackdir / 8)
         for col in self.collectable_sprites:
             sprite_collision = pygame.sprite.spritecollide(col, self.player_sprite, False)
             if sprite_collision:
