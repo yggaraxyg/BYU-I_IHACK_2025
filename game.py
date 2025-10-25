@@ -93,7 +93,7 @@ class World:
 
         
     def camera(self):
-        self.camera_pos = self.camera_pos + self.velocity
+        self.camera_pos = self.player_pos - 0.5 * pygame.Vector2(self.map_pwidth, self.map_pheight)
         if self.camera_pos.x <= 0:
             self.camera_pos.x = 0
         if self.camera_pos.y <= 0:
