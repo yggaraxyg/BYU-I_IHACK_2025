@@ -234,7 +234,7 @@ class World:
         menu = main_menu()
 
         try:
-            menu.mainloop(screen)
+            menu.mainloop(self._screen)
         except Exception as e:
             pass
         finally:
