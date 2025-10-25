@@ -10,6 +10,7 @@ from tkinter import filedialog
 from questionbackend import *
 
 question_list = []
+file_path = "data/questions/easy_mode.csv" # Default CSV file path
 
 class World:
     def __init__(self):
@@ -33,6 +34,8 @@ class World:
         self.player = Player(pygame.Vector2(60,60))
         self.turtle = Turtle(pygame.Vector2(20, 20))
         self.salamander = Salamander(pygame.Vector2(100,100))
+        self.eyeball = Eyeball(pygame.Vector2(300,300))
+        self.ogre = Ogre(pygame.Vector2(200,200))
         self.player_sprite.add(self.player)
         self.enemy_sprites.add(self.turtle)
         self.enemy_sprites.add(self.salamander)
@@ -86,9 +89,9 @@ class World:
         self.on_cleanup()
 
     def player_update(self):
-        self.player_relative = self.player.pos - self.camera_pos
-        self.player_sprite.update(self.player_relative)
-        
+        self.player.pos = self.player.pos + self.player.velocity
+        self.player_sprite.update(self.player.pos - self.camera_pos)
+        self.collision_check()
 
     
     def enemies_update(self):
@@ -98,7 +101,6 @@ class World:
 
         
     def camera(self):
-        self.cameralock = pygame.Vector2(1,1)
         self.camera_pos = self.player.pos - 0.5 * pygame.Vector2(self.width, self.height)
         if self.camera_pos.x <= 0:
             self.camera_pos.x = 0
@@ -203,7 +205,7 @@ class GameEntity(pygame.sprite.Sprite):
         if (self.hp<=0):
             self.die()
 
-    def heal(num):
+    def heal(self, num):
         self.hpmod(num)
 
     def hurt(self,num):
@@ -273,23 +275,19 @@ class Heart(GameEntity):
 
 class Salamander(GameEntity):
     def __init__(self, pos):
-        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'salamander.png')), 20, 20, 40 , 0.25) 
-    
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'salamander.png')), 20, 20, 40 , 0.25)        
 
+class Eyeball(GameEntity):
+    def __init__(self, pos):
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'florb.png')), 50, 50, 40 , 0)
+
+class Ogre(GameEntity):
+    def __init__(self, pos):
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'ogre.png')), 400, 400, 1000 , 0.05)
         
 def start_game():
     world = World()
     world.on_execute()
-
-def manual_input():
-    # Manual input function for custom questions
-    print("todo")
-    pass
-
-def choose_default():
-    # Select between default csv files
-    print("todo")
-    pass
 
 def user_csv():
     # Load user csv file
@@ -298,12 +296,21 @@ def user_csv():
     file_path = filedialog.askopenfilename(title="Select CSV File", filetypes=[("CSV files", "*.csv")])
     if file_path:
         print(f"Selected file: {file_path}")
-        question_list = questionbox().getFromCSV(file_path)
-        print(question_list)
+        select_csv(file_path)
     else:
         print("No file selected.")
     
     root.destroy()    
+
+def select_csv(file_path):
+    global question_list
+    question_list = []  # Clear existing questions
+    question_box = questionbox()
+    question_box.getFromCSV(file_path)
+    
+    question_list.extend(question_box.questionlist)
+    print(f"Loaded {len(question_box.questionlist)} questions from {file_path}")
+    print(f"Total questions in list: {len(question_list)}")
 
 def create_questions_menu():
     theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
@@ -311,22 +318,94 @@ def create_questions_menu():
     
     question_menu = pygame_menu.Menu('Manage ?s', 320, 240, theme=theme)
 
-    question_menu.add.button("Manual Input", manual_input, font_size=15)
-    question_menu.add.button("Choose Default CSV", choose_default, font_size=15)
+    csv_submenu = create_csv_menu()
+    manual_submenu = create_manual_menu()
+
+    question_menu.add.button("Manual Input", manual_submenu, font_size=15)
+    question_menu.add.button("Choose Default CSV", csv_submenu, font_size=15)
     question_menu.add.button("Load User CSV", user_csv, font_size=15)
+    question_menu.add.button("test csv", lambda: print(question_list), font_size=15)
 
     return question_menu
 
+def create_csv_menu():
+    theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
+                                     title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
+    
+    csv_menu = pygame_menu.Menu('Select CSV', 320, 240, theme=theme)
+
+    csv_menu.add.button("Easy Mode", lambda: select_csv("data/questions/easy_mode.csv"), font_size=15)
+    csv_menu.add.button("English", lambda: select_csv("data/questions/english.csv"), font_size=15)
+    csv_menu.add.button("Geography", lambda: select_csv("data/questions/geography.csv"), font_size=15)
+    '''csv_menu.add.button("Math", lambda: select_csv("data/questions/math.csv"), font_size=15)
+    This one is broken because math.csv uses characters that break the parser'''
+    csv_menu.add.button("Psych", lambda: select_csv("data/questions/psych.csv"), font_size=15)
+
+    return csv_menu
+
+def create_manual_menu():
+    theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
+                                     title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
+    
+    manual_menu = pygame_menu.Menu('Manual Input', 320, 240, theme=theme)
+
+    question_list = []  # Clear existing questions
+    question_input = manual_menu.add.text_input("Question: ", default="", font_size=11)
+    answer_input = manual_menu.add.text_input("Correct Answer: ", default="", font_size=11)
+    
+    def handle_manual_input():
+        question_text = question_input.get_value()
+        answer_text = answer_input.get_value()
+        wrong1_text = wrong1_input.get_value()
+        wrong2_text = wrong2_input.get_value()
+        wrong3_text = wrong3_input.get_value()
+        
+        if question_text and answer_text and wrong1_text and wrong2_text and wrong3_text:
+            question_box = questionbox()
+            question_box.addQuestion(question_text, answer_text, wrong1_text, wrong2_text, wrong3_text)
+            question_list.append(question_box.questionlist)
+            print(f"Added question: {question_text} -> {answer_text} with wrong answers: {wrong1_text}, {wrong2_text}, {wrong3_text}")
+            # Clear inputs
+            question_input.set_value("")
+            answer_input.set_value("")
+            wrong1_input.set_value("")
+            wrong2_input.set_value("")
+            wrong3_input.set_value("")
+        elif question_text and answer_text:
+            question_box = questionbox()
+            question_box.addQuestion(question_text, answer_text)
+            question_list.append(question_box.questionlist)
+            print(f"Added question: {question_text} -> {answer_text}")
+            # Clear inputs
+            question_input.set_value("")
+            answer_input.set_value("")
+            wrong1_input.set_value("")
+            wrong2_input.set_value("")
+            wrong3_input.set_value("")
+        else:
+            print("Please enter both question and answer")
+    
+    manual_menu.add.button("Add Question", handle_manual_input, font_size=12)
+    manual_menu.add.label("Optional:", font_size=10)
+    wrong1_input = manual_menu.add.text_input("Wrong Answer 1: ", default="", font_size=11)
+    wrong2_input = manual_menu.add.text_input("Wrong Answer 2: ", default="", font_size=11)
+    wrong3_input = manual_menu.add.text_input("Wrong Answer 3: ", default="", font_size=11)
+
+    return manual_menu
+
 if __name__ == "__main__":
+    '''
+    start_game()
+    '''
+    
     pygame.init()
     screen = pygame.display.set_mode((320, 240), pygame.RESIZABLE | pygame.SCALED)
-    
+
     custom_theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
                                      title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
     
     menu = pygame_menu.Menu('', 320, 240, theme=custom_theme)
     
-    # Create the questions submenu
     questions_submenu = create_questions_menu()
     
     logo_image = os.path.join('data', 'sprites', 'logo.png')

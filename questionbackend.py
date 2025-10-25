@@ -6,11 +6,11 @@ class questionbox:
     def __init__(self):
         self.questionlist = []
     
-    def addQuestion(self, que, ans):
-        self.questionlist.append([que,ans])
-
-    def addQuestion(self, que, corans, w1, w2, w3):
-        self.questionlist.append([que,corans,w1,w2,w3])
+    def addQuestion(self, que, ans, w1=None, w2=None, w3=None):
+        if (w1==None) or (w2==None) or (w3==None):
+            self.questionlist.append([que,ans])
+        else:
+            self.questionlist.append([que,ans,w1,w2,w3])
 
     #gets array with question followed by three random answers and the correct one. the sixth element is which one is correct                                   
     def getQuestion(self):                                                                                                                                          
