@@ -72,11 +72,12 @@ class World:
 
 
         self.player_update()
+        self.camera()
       
         self.enemies_update()
         
         self.sprite_update()
-        self.camera()
+        
         
         self.kill()
         self.dt = self.clock.tick(60)
@@ -124,28 +125,33 @@ class World:
     def enemies_update(self):
     
         for enemy in self.enemy_sprites:
-            screen.blit (sprite.image, (sprite.rect.x - camera_offset))
+
           
-            enemy.move_towards(self.player_relative)
+            enemy.move_towards(self.camera_move)
+            enemy.cam(self.camera_pos)
 
         
     def camera(self):
         self.cameralock = pygame.Vector2(1,1)
-        self.camera_pos = self.player.pos - 0.5 * pygame.Vector2(self.width, self.height)
-        if self.camera_pos.x <= 0:
-            self.camera_pos.x = 0
+        self.camera_next_pos = self.player.pos - 0.5 * pygame.Vector2(self.width, self.height)
+        if self.camera_next_pos.x <= 0:
+            self.camera_next_pos.x = 0
             self.cameralock.x = 0
-        if self.camera_pos.y <= 0:
-            self.camera_pos.y = 0
+        if self.camera_next_pos.y <= 0:
+            self.camera_next_pos.y = 0
             self.cameralock.y = 0
-        if self.camera_pos.x >= self.map_pwidth - self.width:
-            self.camera_pos.x = self.map_pwidth - self.width
+        if self.camera_next_pos.x >= self.map_pwidth - self.width:
+            self.camera_next_pos.x = self.map_pwidth - self.width
             self.cameralock.x = 0
-        if self.camera_pos.y >= self.map_pheight - self.height:
-            self.camera_pos.y = self.map_pheight - self.height
+        if self.camera_next_pos.y >= self.map_pheight - self.height:
+            self.camera_next_pos.y = self.map_pheight - self.height
             self.cameralock.y = 0
+        self.camera_move = self.camera_next_pos - self.camera_pos
+        self.camera_pos = self.camera_next_pos
 
     def sprite_update(self):
+        for sprite in self.collectable_sprites:
+            sprite.cam(self.camera_pos)
         pass
 
     def collision_check(self):
@@ -276,6 +282,8 @@ class GameEntity(pygame.sprite.Sprite):
         self.velocity = 0
         self.facing = pygame.Vector2(0,0)
 
+
+
     def hpmod(self, num):
         self.hp+=num
         if (self.hp>=self.maxhp):
@@ -316,10 +324,6 @@ class GameEntity(pygame.sprite.Sprite):
     def sety(self, y):
         self.cords[1]=y
 
-    def camview(self, cam, lock):
-        self.pos.x -= (cam.x * lock.x)
-        self.pos.y -= (cam.y * lock.y)
-
     def die(self):
         self.kill()
 
@@ -329,6 +333,8 @@ class GameEntity(pygame.sprite.Sprite):
             direction=direction.normalize()
             self.pos+=direction*self.speed
             self.rect.center=self.pos
+    def cam(self, cam):
+        self.rect = self.image.get_rect(center = self.pos - cam)
 
 
 class Player(GameEntity):
@@ -341,6 +347,7 @@ class Player(GameEntity):
 class Turtle(GameEntity):
     def __init__(self, pos):
         super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'turtle.png')), 25, 25, 10, 0)
+
 
 class Treasure(GameEntity):
     def __init__(self, pos, score):
@@ -470,7 +477,7 @@ def create_manual_menu():
     return manual_menu
 
 if __name__ == "__main__":
-
+    '''
     start_game()
     '''
     
@@ -501,4 +508,3 @@ if __name__ == "__main__":
     finally:
         pygame.quit()
         sys.exit()
-    '''
