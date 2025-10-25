@@ -16,7 +16,7 @@ def parse_csv(input_csv):
     with open(input_csv, newline='') as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
-            # skip header row
-            if reader.line_num == 1:
+            # skip header row if it follows format of question, answer
+            if [cell.lower() for cell in row] == ['question', 'answer']:
                 continue
             output_array.append(row)
