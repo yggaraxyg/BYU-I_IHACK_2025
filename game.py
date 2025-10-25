@@ -58,13 +58,6 @@ class World:
         self.collisionmap()
         self.weapon_sprites = pygame.sprite.Group()
         self.attack_cooldown = 0
-        
-    def on_event(self, event):
-        if event.type == pygame.QUIT:
-            self._running = False
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_t:
-                self.show_question_popup()
 
     def on_loop(self):
         self.get_input()
@@ -304,13 +297,13 @@ class World:
         for weapon in self.weapon_sprites:
             hit_enemies = pygame.sprite.spritecollide(weapon, self.enemy_sprites, False)
             for enemy in hit_enemies:
-                print(f"Hit {enemy.__class__.__name__}!")
+                print(f"Hit {enemy.__class__.__name__}")
                 enemy.hurt(5)
                 if enemy.hp <= 0:
                     self.player.score += enemy.score
                     enemy.die()
         
-        pygame.time.set_timer(pygame.USEREVENT + 1, 150)
+        pygame.time.set_timer(pygame.USEREVENT + 1, 300)
 
     def on_event(self, event):
         if event.type == pygame.QUIT:
@@ -551,12 +544,13 @@ def create_manual_menu():
                                      title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
     
     manual_menu = pygame_menu.Menu('Manual Input', 320, 240, theme=theme)
-
+    global question_list
     question_list = []  # Clear existing questions
     question_input = manual_menu.add.text_input("Question: ", default="", font_size=11)
     answer_input = manual_menu.add.text_input("Correct Answer: ", default="", font_size=11)
     
     def handle_manual_input():
+        global question_list
         question_text = question_input.get_value()
         answer_text = answer_input.get_value()
         wrong1_text = wrong1_input.get_value()
