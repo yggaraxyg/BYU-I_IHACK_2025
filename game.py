@@ -516,7 +516,13 @@ class World:
                     self.game_over("YOU WIN!")
                 if((wincondition==2) and (winquantity<=self.player.score)):
                     self.game_over("YOU WIN!")
-
+            sprite_collision = pygame.sprite.spritecollide(col, self.enemy_sprites, False)
+            if sprite_collision:
+                if((col.score)>(col.hp)):
+                    sprite_collision[0].score+=col.score
+                else:
+                    sprite_collision[0].score+=col.hp*5
+                col.die()
         prev_tile =  pygame.Vector2(self.player.pos.x / 16, self.player.pos.y /16)    
         next_pos = self.player.pos + self.player.velocity
         next_tile =  pygame.Vector2(next_pos.x / 16 , next_pos.y / 16)           
