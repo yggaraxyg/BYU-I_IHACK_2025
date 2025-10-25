@@ -61,7 +61,7 @@ class treasure(player):
 
     def die():
         if (self.container !=None):
-            container.remove(self)
+            self.container.remove(self)
             del(self)
         
     def whentouching(toucher):
@@ -81,7 +81,7 @@ class heart(player):
 
     def die():
         if (self.container !=None):
-            container.remove(self)
+            self.container.remove(self)
             del(self)
         
     def whentouching(toucher):
@@ -94,13 +94,4 @@ class heart(player):
     def hpmod(num):
         self.hp=self.hp
 
-class human(player):
-    def __init__(self, cordx, cordy, maxhp, hp, score, containter = None):
-        self.cords = [cordx,cordy]
-        self.maxhp= maxhp
-        self.hp = hp
-        self.score = score
-        self.container = container
-
-    def die():
-        gameover()
+class 

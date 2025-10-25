@@ -27,6 +27,14 @@ class World:
         self.turtle_image = pygame.image.load(os.path.join('data', 'sprites', 'turtle.png'))
         self.player_sprite = pygame.sprite.GroupSingle()
         self.enemy_sprites = pygame.sprite.Group()
+        self.player_health = 10
+        self.player = Player(self.player_pos, self.player_image)
+        self.turtle_pos = pygame.Vector2(20, 20)
+        self.turtle = Turtle(self.turtle_pos, self.turtle_image)
+        self.enemy_sprites.add(self.turtle)
+        self.player_sprite.add(self.player)
+        self.last_hit_time = 0
+        self.player_facing = pygame.Vector2(0,0)
 
     def on_event(self, event):
         if event.type == pygame.QUIT:
@@ -35,7 +43,10 @@ class World:
     def on_loop(self):
         self.get_input()
         self.player_update()
+        self.enemies_update()
         self.sprite_update()
+
+        self.kill()
         self.dt = self.clock.tick(60)
         pass
 
@@ -60,32 +71,55 @@ class World:
 
     def player_update(self):
         self.player_pos = self.player_pos + self.velocity
-        self.player = Player(self.player_pos, self.player_image)
-        self.player_sprite.add(self.player)
+        self.player_sprite.update(self.player_pos)
+        self.collision_check()
+
     
-    def enemy_sprites(self):
-        self.turtlepos = pygame.Vector2(20, 20)
-        self.turtle = Turtle(self.turtlepos, self.turtle_image)
-        self.enemy_sprites.add(self.turtle)
+    def enemies_update(self):
+        pass
+
 
     def sprite_update(self):
         pass
 
+    def collision_check(self):
+        sprite_collision = pygame.sprite.spritecollide(self.player, self.enemy_sprites, False)
+        cooldown_time = 120
+        current_time = pygame.time.get_ticks()
+        if current_time - self.last_hit_time >= cooldown_time:
+            if sprite_collision:
+                self.last_hit_time = current_time
+                self.player_health -= 1
+                self.player_pos -= self.player_facing * 2
+        else:
+            self.player_pos -= self.player_facing * 2
+    
+    def kill(self):
+        if self.player_health <= 0:
+            self.player.kill()
+
     def get_input(self):
         self.keys = pygame.key.get_pressed()
-        self.speed = 1
+        self.speed = 0.1
         self.velocity = pygame.Vector2(0,0)
+        prev_facing = self.player_facing
+        self.player_facing = pygame.Vector2(0,0)
         if self.keys[pygame.K_LSHIFT]:
             self.speed = self.speed * 2
         if self.keys[pygame.K_w]:
             self.velocity.y -= self.speed * self.dt
+            self.player_facing.y = -1
         if self.keys[pygame.K_s]:
             self.velocity.y += self.speed * self.dt
+            self.player_facing.y = 1
         if self.keys[pygame.K_a]:
             self.velocity.x -= self.speed * self.dt
+            self.player_facing.x = -1
         if self.keys[pygame.K_d]:
             self.velocity.x += self.speed * self.dt
-        
+            self.player_facing.x = 1
+        if self.player_facing == pygame.Vector2(0,0):
+            self.player_facing = prev_facing
 
 
 
@@ -95,6 +129,9 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, pos, image):
         super().__init__()
         self.image = image
+        self.rect = self.image.get_rect(center = pos)
+    
+    def update(self, pos):
         self.rect = self.image.get_rect(center = pos)
 
 class Turtle(pygame.sprite.Sprite):
