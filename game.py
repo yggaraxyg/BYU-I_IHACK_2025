@@ -323,18 +323,18 @@ class World:
             starttime+=(pygame.time.get_ticks()-shortdelay)
 
             if self.attack_cooldown <= 0:
-            if self.keys[pygame.K_UP]:
-                self.attack('up')
-                self.attack_cooldown = 300
-            elif self.keys[pygame.K_DOWN]:
-                self.attack('down')
-                self.attack_cooldown = 300
-            elif self.keys[pygame.K_LEFT]:
-                self.attack('left')
-                self.attack_cooldown = 300
-            elif self.keys[pygame.K_RIGHT]:
-                self.attack('right')
-                self.attack_cooldown = 300
+                if self.keys[pygame.K_UP]:
+                    self.attack('up')
+                    self.attack_cooldown = 300
+                elif self.keys[pygame.K_DOWN]:
+                    self.attack('down')
+                    self.attack_cooldown = 300
+                elif self.keys[pygame.K_LEFT]:
+                    self.attack('left')
+                    self.attack_cooldown = 300
+                elif self.keys[pygame.K_RIGHT]:
+                    self.attack('right')
+                    self.attack_cooldown = 300
         
         if self.player.facing == pygame.Vector2(0,0):
             self.player.facing = prev_facing
