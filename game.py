@@ -105,8 +105,8 @@ class World:
         self.enemy_sprites.draw(self._screen)
         self.collectable_sprites.draw(self._screen)
         self.weapon_sprites.draw(self._screen)  # Add this line
-        font = pygame.font.SysFont("Courier", 12)
-        text_surface = font.render(f"Score: {self.player.score} HP: {self.player.hp} Time:{(pygame.time.get_ticks()/1000):.2f}s Correct: {self.correct}/{self.answers}", True, (150, 150, 150))
+        font = pygame.font.SysFont("Courier", 11)
+        text_surface = font.render(f"Score:{self.player.score} HP:{self.player.hp} Time:{(pygame.time.get_ticks()/1000):.2f}s Correct:{self.correct}/{self.answers}", True, (150, 150, 150))
         self._screen.blit(text_surface, (10, 10))
         pygame.display.flip()
 
@@ -325,7 +325,11 @@ class World:
             for enemy in hit_enemies:
                 enemy.hurt(5)
                 if enemy.hp <= 0:
-                    self.player.score += enemy.score
+                    if(random.choice([True,False])):
+                        glob=Heart(enemy.pos, (enemy.score/5))
+                    else:
+                        glob=Treasure(enemy.pos, enemy.score)
+                    self.collectable_sprites.add(glob)
                     enemy.die()
         
         pygame.time.set_timer(pygame.USEREVENT + 1, 300)
