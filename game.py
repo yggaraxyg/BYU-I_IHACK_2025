@@ -135,6 +135,7 @@ class World:
 
     def player_update(self):
         self.player_relative = self.player.pos - self.camera_pos
+        self.player.update_sprite(self.player.facing)
         self.player_sprite.update(self.player_relative)
         self.player.update_rect(self.camera_pos)
         self.collision_check()
@@ -547,7 +548,31 @@ class GameEntity(pygame.sprite.Sprite):
 
 class Player(GameEntity):
     def __init__(self, pos):
-        super().__init__(pos, pygame.image.load(os.path.join('data', 'sprites', 'player.png')), 10, 10, 0, 0.1)
+
+        self.sprites = {
+            'up': pygame.image.load(os.path.join('data', 'sprites', 'player_up.png')),
+            'down': pygame.image.load(os.path.join('data', 'sprites', 'player.png')),
+            'left': pygame.image.load(os.path.join('data', 'sprites', 'player_left.png')),
+            'right': pygame.image.load(os.path.join('data', 'sprites', 'player_right.png')),
+        }
+
+        super().__init__(pos, self.sprites['down'], 10, 10, 0, 0.1)
+        self.current_direction = 'down'
+    
+    def update_sprite(self, facing_direction):
+        new_direction = 'down'
+        if facing_direction.y < 0:
+            new_direction = 'up'
+        elif facing_direction.y > 0:
+            new_direction = 'down'
+        elif facing_direction.x < 0:
+            new_direction = 'left'
+        elif facing_direction.x > 0:
+            new_direction = 'right'
+
+        if new_direction != self.current_direction:
+            self.current_direction = new_direction
+            self.image = self.sprites[new_direction]
     
     def update(self, pos):
         self.rect = self.image.get_rect(center = pos)
