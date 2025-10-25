@@ -9,6 +9,71 @@ from pytmx.util_pygame import load_pygame
 import tkinter
 from tkinter import filedialog
 from questionbackend import *
+from pathfinding.core.diagonal_movement import DiagonalMovement
+from pathfinding.core.grid import Grid
+from pathfinding.finder.a_star import AStarFinder
+
+def create_pathfinding_grid(collision_map, map_width, map_height):
+    """Create a pathfinding grid from collision map"""
+    # Create a 2D array where 1 = walkable, 0 = blocked
+    matrix = []
+    for y in range(max(1, map_height)):  # Ensure at least 1x1 grid
+        row = []
+        for x in range(max(1, map_width)):
+            # Invert the collision map: True (blocked) becomes 0 (not walkable)
+            # Add bounds checking for collision_map access
+            if (x, y) in collision_map:
+                is_walkable = not collision_map[(x, y)]
+            else:
+                is_walkable = True  # Default to walkable if not in collision map
+            row.append(1 if is_walkable else 0)
+        matrix.append(row)
+    
+    return Grid(matrix=matrix)
+
+def find_path_with_library(start_pos, goal_pos, collision_map, map_width, map_height):
+    """Find path using pathfinding library"""
+    try:
+        # Convert world positions to grid coordinates
+        start_x = max(0, min(int(start_pos.x // 16), map_width - 1))
+        start_y = max(0, min(int(start_pos.y // 16), map_height - 1))
+        goal_x = max(0, min(int(goal_pos.x // 16), map_width - 1))
+        goal_y = max(0, min(int(goal_pos.y // 16), map_height - 1))
+        
+        # Double check bounds (shouldn't be necessary but extra safety)
+        if not (0 <= start_x < map_width and 0 <= start_y < map_height):
+            return []
+        if not (0 <= goal_x < map_width and 0 <= goal_y < map_height):
+            return []
+        
+        # Create grid
+        grid = create_pathfinding_grid(collision_map, map_width, map_height)
+        
+        # Get start and end nodes
+        start_node = grid.node(start_x, start_y)
+        end_node = grid.node(goal_x, goal_y)
+        
+        # Check if start or end positions are blocked
+        if not start_node.walkable or not end_node.walkable:
+            return []
+        
+        # Create finder with diagonal movement disabled for simpler movement
+        finder = AStarFinder(diagonal_movement=DiagonalMovement.never)
+        
+        # Find path
+        path, runs = finder.find_path(start_node, end_node, grid)
+        
+        # Convert path to world coordinates
+        world_path = []
+        for node in path:
+            # Center the position in the tile
+            world_pos = pygame.Vector2(node.x * 16 + 8, node.y * 16 + 8)
+            world_path.append(world_pos)
+        
+        return world_path
+        
+    except Exception as e:
+        return []
 
 question_list = []
 file_path = "data/questions/easy_mode.csv" # Default CSV file path
@@ -62,41 +127,90 @@ class World:
         self.last_moved = 0 
         self.cameralock = pygame.Vector2(1,1)
         self.collisionmap()
+        
+        # Create pathfinding collision map
+        self.create_pathfinding_map()
+        
         self.weapon_sprites = pygame.sprite.Group()
         self.attack_cooldown = 0
         self.correct=0
         self.answers=0;
         self.knockbackdir = pygame.Vector2(0,0)
 
+    def create_pathfinding_map(self):
+        """Create a 2D grid for pathfinding that matches player collision detection"""
+        self.collision_grid = {}
+        
+        # Mark all tiles as passable initially
+        for x in range(self.map.width):
+            for y in range(self.map.height):
+                self.collision_grid[(x, y)] = False
+        
+        # Use the exact same collision detection as the player
+        for x in range(self.map.width):
+            for y in range(self.map.height):
+                try:
+                    # Check if this tile has collision (layer 1, same as player collision check)
+                    tile_gid = self.map.get_tile_gid(x, y, 1)
+                    if tile_gid:  # If there's a tile in layer 1, it's a collision tile
+                        self.collision_grid[(x, y)] = True
+                except Exception as e:
+                    # If there's an error accessing this tile, treat it as non-blocking
+                    self.collision_grid[(x, y)] = False
+        
+        # Debug: Check if player start position is blocked
+        player_x = max(0, min(int(self.player.pos.x // 16), self.map.width - 1))
+        player_y = max(0, min(int(self.player.pos.y // 16), self.map.height - 1))
+        player_blocked = self.collision_grid.get((player_x, player_y), False)
+    
     def on_loop(self):
         self.get_input()
-
         self.player_update()
         self.camera()
-      
         self.enemies_update()
-
         self.sprite_update()
-        
         self.weapon_update()
         self.kill()
         self.dt = self.clock.tick(60)
 
-        if((pygame.time.get_ticks()-self.last_moved)>20000):
-            delay = 200
-        else:
-            delay = 2000           
-        if ((pygame.time.get_ticks()-self.last_spawn)>delay):
-            self.last_spawn = pygame.time.get_ticks()
-            self.spawn_random()
-            
-            
-        pass
+        # Limit total number of enemies for performance
+        MAX_ENEMIES = 20
+        current_enemy_count = len(self.enemy_sprites)
+
+        if current_enemy_count < MAX_ENEMIES:
+            if((pygame.time.get_ticks()-self.last_moved)>20000):
+                delay = 200
+            else:
+                delay = 2000           
+        
+            if ((pygame.time.get_ticks()-self.last_spawn)>delay):
+                self.last_spawn = pygame.time.get_ticks()
+                self.spawn_random()
+        
+        # Remove distant enemies to keep count manageable
+        if current_enemy_count > MAX_ENEMIES:
+            self.cull_distant_enemies()
+
+    def cull_distant_enemies(self):
+        """Remove enemies that are too far from the player"""
+        enemies_to_remove = []
+        for enemy in self.enemy_sprites:
+            distance = (self.player.pos - enemy.pos).length()
+            if distance > 500:  # Remove enemies more than 500 pixels away
+                enemies_to_remove.append(enemy)
+        
+        # Remove the most distant enemies
+        if enemies_to_remove:
+            enemies_to_remove.sort(key=lambda e: (self.player.pos - e.pos).length(), reverse=True)
+            for enemy in enemies_to_remove[:len(enemies_to_remove)//2]:  # Remove half of distant enemies
+                enemy.kill()
 
     def on_render(self):
         global wincondition
         global winquantity
         self._screen.fill((0,0,0))
+        
+        # Render map
         for row in range(self.map.width):
             for column in range (self.map.height):
                 offsetx = 0
@@ -108,15 +222,50 @@ class World:
                     pass
                 if tile:
                     self._screen.blit(tile, self.mapdisplay)
+        
+        # Debug: Draw collision grid (press C to toggle)
+        if getattr(self, 'show_collision_debug', False):
+            for (x, y), blocked in self.collision_grid.items():
+                if blocked:
+                    screen_x = x * 16 - self.camera_pos.x
+                    screen_y = y * 16 - self.camera_pos.y
+                    if -16 <= screen_x <= self.width and -16 <= screen_y <= self.height:
+                        # Create a semi-transparent red surface
+                        collision_surf = pygame.Surface((16, 16))
+                        collision_surf.set_alpha(100)
+                        collision_surf.fill((255, 0, 0))
+                        self._screen.blit(collision_surf, (screen_x, screen_y))
+        
+        # Debug: Draw enemy paths (press P to toggle)
+        if getattr(self, 'show_path_debug', False):
+            for enemy in self.enemy_sprites:
+                if hasattr(enemy, 'path') and enemy.path:
+                    path_points = []
+                    for waypoint in enemy.path:
+                        screen_pos = waypoint - self.camera_pos
+                        if -50 <= screen_pos.x <= self.width + 50 and -50 <= screen_pos.y <= self.height + 50:
+                            path_points.append((int(screen_pos.x), int(screen_pos.y)))
+                    
+                    if len(path_points) > 1:
+                        pygame.draw.lines(self._screen, (0, 255, 0), False, path_points, 2)
+                    
+                    # Draw current target waypoint
+                    if enemy.path_index < len(enemy.path):
+                        target = enemy.path[enemy.path_index] - self.camera_pos
+                        if -50 <= target.x <= self.width + 50 and -50 <= target.y <= self.height + 50:
+                            pygame.draw.circle(self._screen, (255, 255, 0), (int(target.x), int(target.y)), 6)
+        
         self.player_sprite.draw(self._screen)
         self.enemy_sprites.draw(self._screen)
         self.collectable_sprites.draw(self._screen)
         self.weapon_sprites.draw(self._screen)
+        
         font = pygame.font.SysFont("Courier", 11)
         text_surface = font.render(f"Score:{self.player.score} HP:{self.player.hp} Time:{((pygame.time.get_ticks()-starttime)/1000):.2f}s Correct:{self.correct}/{self.answers}", True, (150, 150, 150))
         if ((wincondition==3) and (winquantity<=((pygame.time.get_ticks()-starttime)/1000))):
             self.game_over("YOU WIN!")
         self._screen.blit(text_surface, (10, 10))
+        
         pygame.display.flip()
 
     def on_cleanup(self):
@@ -143,16 +292,94 @@ class World:
     
     def enemies_update(self):
         for enemy in self.enemy_sprites:
-            enemy.move_towards(self.player.pos)
+            # All enemies should use collision-aware movement
+            if isinstance(enemy, (Ogre, Salamander)):
+                # Smart enemies use full pathfinding with the library
+                enemy.move_towards_with_pathfinding(
+                    self.player.pos, 
+                    self.collision_grid, 
+                    self.map.width, 
+                    self.map.height
+                )
+            else:
+                # Simple enemies use collision-aware direct movement
+                if hasattr(enemy, 'move_towards_with_collision_check'):
+                    enemy.move_towards_with_collision_check(self.player.pos, self.collision_grid)
+                else:
+                    # Fallback for enemies without collision checking
+                    enemy.move_towards(self.player.pos)
+            
             enemy.update_sprite(self.player.pos - enemy.pos)
             enemy.update_rect(self.camera_pos)
 
     def spawn_random(self):
+        """Spawn an enemy in a random walkable location"""
         etypes = [Salamander, Salamander, Salamander, Salamander, Salamander, Eyeball, Eyeball, Eyeball, Eyeball, Eyeball, Ogre]
-        self.spawn = random.choice(etypes)(pygame.Vector2(random.randint(0,768),random.randint(0,1152)))
-        self.enemy_sprites.add(self.spawn)
-            
         
+        # Find a valid spawn position (not in a wall and not too close to player)
+        max_attempts = 100
+        min_distance_from_player = 64  # At least 64 pixels away from player
+        
+        for attempt in range(max_attempts):
+            # Generate random position in world coordinates (with safety margins)
+            spawn_x = random.randint(32, max(32, (self.map.width - 2) * 16))
+            spawn_y = random.randint(32, max(32, (self.map.height - 2) * 16))
+            spawn_pos = pygame.Vector2(spawn_x, spawn_y)
+            
+            # Convert to tile coordinates to check collision
+            tile_x = max(0, min(int(spawn_x // 16), self.map.width - 1))
+            tile_y = max(0, min(int(spawn_y // 16), self.map.height - 1))
+            
+            # Check if this tile is walkable
+            is_walkable = not self.collision_grid.get((tile_x, tile_y), False)
+            
+            # Check if it's far enough from the player
+            distance_from_player = (spawn_pos - self.player.pos).length()
+            is_far_enough = distance_from_player >= min_distance_from_player
+            
+            if is_walkable and is_far_enough:
+                # Found a valid position!
+                enemy_type = random.choice(etypes)
+                self.spawn = enemy_type(spawn_pos)
+                self.enemy_sprites.add(self.spawn)
+                return
+        
+        # If we couldn't find a valid position after max_attempts, 
+        # fall back to spawning near the player (but still not in walls)
+        self.spawn_near_player_safe(etypes)
+    
+    def spawn_near_player_safe(self, etypes):
+        """Fallback: spawn enemy near player but in a safe location"""
+        player_tile_x = max(0, min(int(self.player.pos.x // 16), self.map.width - 1))
+        player_tile_y = max(0, min(int(self.player.pos.y // 16), self.map.height - 1))
+        
+        # Check tiles in expanding rings around the player
+        for radius in range(3, 10):  # Start at distance 3, go up to 10
+            for dx in range(-radius, radius + 1):
+                for dy in range(-radius, radius + 1):
+                    # Only check tiles on the edge of the current radius
+                    if abs(dx) != radius and abs(dy) != radius:
+                        continue
+                    
+                    check_x = player_tile_x + dx
+                    check_y = player_tile_y + dy
+                    
+                    # Check bounds
+                    if not (0 <= check_x < self.map.width and 0 <= check_y < self.map.height):
+                        continue
+                    
+                    # Check if walkable
+                    if not self.collision_grid.get((check_x, check_y), False):
+                        # Found a walkable tile!
+                        spawn_pos = pygame.Vector2(check_x * 16 + 8, check_y * 16 + 8)
+                        enemy_type = random.choice(etypes)
+                        self.spawn = enemy_type(spawn_pos)
+                        self.enemy_sprites.add(self.spawn)
+                        return
+        
+        # If no walkable location found, skip spawning this time
+        pass
+            
     def camera(self):
         self.cameralock = pygame.Vector2(1,1)
         self.camera_next_pos = self.player.pos - 0.5 * pygame.Vector2(self.width, self.height)
@@ -230,7 +457,7 @@ class World:
 
         prev_tile =  pygame.Vector2(self.player.pos.x / 16, self.player.pos.y /16)    
         next_pos = self.player.pos + self.player.velocity
-        next_tile =  pygame.Vector2(next_pos.x / 16 , next_pos.y /16)           
+        next_tile =  pygame.Vector2(next_pos.x / 16 , next_pos.y / 16)           
         tile = self.map.get_tile_gid(next_tile.x, next_tile.y, 1)
         self.tile_pos = pygame.Vector2(self.player.pos.x - (prev_tile.x * 16), self.player.pos.y - (prev_tile.y * 16))
         if tile:
@@ -297,6 +524,19 @@ class World:
         
         if self.attack_cooldown > 0:
             self.attack_cooldown -= self.dt
+        
+        # Debug toggles
+        if self.keys[pygame.K_c] and not getattr(self, 'c_pressed', False):
+            self.show_collision_debug = not getattr(self, 'show_collision_debug', False)
+            self.c_pressed = True
+        elif not self.keys[pygame.K_c]:
+            self.c_pressed = False
+            
+        if self.keys[pygame.K_p] and not getattr(self, 'p_pressed', False):
+            self.show_path_debug = not getattr(self, 'show_path_debug', False)
+            self.p_pressed = True
+        elif not self.keys[pygame.K_p]:
+            self.p_pressed = False
         
         if self.keys[pygame.K_LSHIFT]:
             self.speedmult=2
@@ -488,6 +728,12 @@ class GameEntity(pygame.sprite.Sprite):
         self.velocity = pygame.Vector2(0,0)
         self.facing = pygame.Vector2(0,0)
         self.cords = [pos.x, pos.y]
+        
+        # Pathfinding attributes
+        self.path = []
+        self.path_index = 0
+        self.last_pathfind_time = 0
+        self.pathfind_cooldown = 500  # Recalculate path every 500ms
 
     def hpmod(self, num):
         self.hp+=num
@@ -533,7 +779,88 @@ class GameEntity(pygame.sprite.Sprite):
         self.kill()
         del(self)
 
+    def move_towards_with_pathfinding(self, target_pos, collision_grid, map_width, map_height):
+        """Move towards target using pathfinding library"""
+        current_time = pygame.time.get_ticks()
+        
+        # Recalculate path periodically or if we don't have a path
+        if (current_time - self.last_pathfind_time > self.pathfind_cooldown or 
+            not self.path or self.path_index >= len(self.path)):
+            
+            self.path = find_path_with_library(self.pos, target_pos, collision_grid, map_width, map_height)
+            self.path_index = 0
+            self.last_pathfind_time = current_time
+        
+        if self.path and self.path_index < len(self.path):
+            # Move towards next waypoint in path
+            target_waypoint = self.path[self.path_index]
+            direction = target_waypoint - self.pos
+            
+            # If we're close to the current waypoint, move to next one
+            if direction.length() < 8:  # Within 8 pixels
+                self.path_index += 1
+                if self.path_index < len(self.path):
+                    target_waypoint = self.path[self.path_index]
+                    direction = target_waypoint - self.pos
+            
+            # Move towards the waypoint
+            if direction.length() > 0:
+                direction = direction.normalize()
+                # Check if the next position would be blocked
+                next_pos = self.pos + direction * self.speed
+                next_x, next_y = int(next_pos.x // 16), int(next_pos.y // 16)
+                
+                # Bounds check before accessing collision grid
+                if (0 <= next_x < map_width and 0 <= next_y < map_height and 
+                    not collision_grid.get((next_x, next_y), False)):
+                    self.pos = next_pos
+                    self.rect.center = self.pos
+        else:
+            # Enhanced fallback - use collision-aware direct movement
+            self.move_towards_with_collision_check(target_pos, collision_grid)
+
+    def move_towards_with_collision_check(self, target_pos, collision_grid):
+        """Direct movement with collision checking"""
+        direction = target_pos - self.pos
+        if direction.length() > 0:
+            direction = direction.normalize()
+            
+            # Try to move in the desired direction
+            next_pos = self.pos + direction * self.speed
+            next_x, next_y = int(next_pos.x // 16), int(next_pos.y // 16)
+            
+            # Get map bounds from collision grid (assuming it's properly sized)
+            max_x = max((x for x, y in collision_grid.keys()), default=0)
+            max_y = max((y for x, y in collision_grid.keys()), default=0)
+            
+            if (0 <= next_x <= max_x and 0 <= next_y <= max_y and 
+                not collision_grid.get((next_x, next_y), False)):
+                # Safe to move
+                self.pos = next_pos
+            else:
+                # Try moving in just X direction
+                next_pos_x = self.pos + pygame.Vector2(direction.x * self.speed, 0)
+                next_x_only = int(next_pos_x.x // 16)
+                next_y_only = int(next_pos_x.y // 16)
+                
+                if (0 <= next_x_only <= max_x and 0 <= next_y_only <= max_y and
+                    not collision_grid.get((next_x_only, next_y_only), False)):
+                    self.pos = next_pos_x
+                else:
+                    # Try moving in just Y direction
+                    next_pos_y = self.pos + pygame.Vector2(0, direction.y * self.speed)
+                    next_x_y = int(next_pos_y.x // 16)
+                    next_y_y = int(next_pos_y.y // 16)
+                    
+                    if (0 <= next_x_y <= max_x and 0 <= next_y_y <= max_y and
+                        not collision_grid.get((next_x_y, next_y_y), False)):
+                        self.pos = next_pos_y
+                    # If both directions are blocked, don't move
+            
+            self.rect.center = self.pos
+
     def move_towards(self, pos):
+        """Original direct movement (fallback)"""
         direction = pos-self.pos
         if(direction.length()>0):
             direction=direction.normalize()
@@ -828,7 +1155,7 @@ def main_menu():
 
 if __name__ == "__main__":
 
-    '''
+
     start_game()
     '''
     
@@ -845,3 +1172,93 @@ if __name__ == "__main__":
         pygame.quit()
         sys.exit()
     #'''
+
+import heapq
+from collections import deque
+
+class PathNode:
+    def __init__(self, x, y, g_cost=0, h_cost=0, parent=None):
+        self.x = x
+        self.y = y
+        self.g_cost = g_cost  # Distance from start
+        self.h_cost = h_cost  # Heuristic distance to goal
+        self.f_cost = g_cost + h_cost  # Total cost
+        self.parent = parent
+    
+    def __lt__(self, other):
+        return self.f_cost < other.f_cost
+
+def heuristic(node1, node2):
+    """Manhattan distance heuristic"""
+    return abs(node1.x - node2.x) + abs(node1.y - node2.y)
+
+def get_neighbors(node, map_width, map_height):
+    """Get valid neighboring positions"""
+    neighbors = []
+    directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]  # Up, Down, Right, Left
+    
+    for dx, dy in directions:
+        new_x, new_y = node.x + dx, node.y + dy
+        if 0 <= new_x < map_width and 0 <= new_y < map_height:
+            neighbors.append(PathNode(new_x, new_y))
+    
+    return neighbors
+
+def a_star_pathfind(start_pos, goal_pos, collision_map, map_width, map_height):
+    """A* pathfinding algorithm"""
+    # Convert world positions to grid coordinates
+    start_x = int(start_pos.x // 16)
+    start_y = int(start_pos.y // 16)
+    goal_x = int(goal_pos.x // 16)
+    goal_y = int(goal_pos.y // 16)
+    
+    # Check bounds
+    if not (0 <= start_x < map_width and 0 <= start_y < map_height):
+        return []
+    if not (0 <= goal_x < map_width and 0 <= goal_y < map_height):
+        return []
+    
+    start_node = PathNode(start_x, start_y)
+    goal_node = PathNode(goal_x, goal_y)
+    
+    open_list = []
+    closed_set = set()
+    
+    heapq.heappush(open_list, start_node)
+    
+    while open_list:
+        current_node = heapq.heappop(open_list)
+        
+        if (current_node.x, current_node.y) in closed_set:
+            continue
+            
+        closed_set.add((current_node.x, current_node.y))
+        
+        # Check if we reached the goal
+        if current_node.x == goal_node.x and current_node.y == goal_node.y:
+            # Reconstruct path
+            path = []
+            while current_node:
+                # Convert back to world coordinates
+                world_pos = pygame.Vector2(current_node.x * 16 + 8, current_node.y * 16 + 8)
+                path.append(world_pos)
+                current_node = current_node.parent
+            return path[::-1]  # Reverse to get start-to-goal order
+        
+        # Check neighbors
+        for neighbor in get_neighbors(current_node, map_width, map_height):
+            if (neighbor.x, neighbor.y) in closed_set:
+                continue
+            
+            # Check if this tile is blocked
+            if collision_map.get((neighbor.x, neighbor.y), False):
+                continue
+            
+            neighbor.g_cost = current_node.g_cost + 1
+            neighbor.h_cost = heuristic(neighbor, goal_node)
+            neighbor.f_cost = neighbor.g_cost + neighbor.h_cost
+            neighbor.parent = current_node
+            
+            heapq.heappush(open_list, neighbor)
+    
+    return []  # No path found
