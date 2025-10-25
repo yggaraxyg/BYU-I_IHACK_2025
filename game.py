@@ -67,12 +67,12 @@ class World:
     def on_loop(self):
         self.get_input()
 
-            self.player_update()
-            self.camera()
+        self.player_update()
+        self.camera()
       
-            self.enemies_update()
+        self.enemies_update()
         
-            self.sprite_update()
+        self.sprite_update()
         
         self.weapon_update()
         self.kill()
