@@ -1027,10 +1027,8 @@ class Dragon(GameEntity):
         self.last_spawn = 0
         
     def updatepic(self, pos, group, facing_direction):
-        print(type(self))
         dist = (self.pos.x - pos.x, self.pos.y - pos.y)
         far = math.hypot(*dist)
-        print(far)
         if (far<=100):
             if facing_direction.x < 0:
                 self.image = self.sprites['leftnear']
