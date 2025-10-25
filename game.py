@@ -280,12 +280,13 @@ class World:
         self.enemy_sprites.draw(self._screen)
         self.collectable_sprites.draw(self._screen)
         self.weapon_sprites.draw(self._screen)
+        pygame.draw.rect(self._screen, (0,0,0), (0,0,self.width,20))
         
         font = pygame.font.SysFont("Courier", 11)
-        text_surface = font.render(f"Score:{self.player.score} HP:{self.player.hp} Time:{((pygame.time.get_ticks()-starttime)/1000):.2f}s Correct:{self.correct}/{self.answers}", True, (150, 150, 150))
+        text_surface = font.render(f"Score:{self.player.score}  HP:{self.player.hp}  Time:{((pygame.time.get_ticks()-starttime)/1000):.2f}s  Correct:{self.correct}/{self.answers}", False, (150, 150, 150))
         if ((wincondition==3) and (winquantity<=((pygame.time.get_ticks()-starttime)/1000))):
             self.game_over("YOU WIN!")
-        self._screen.blit(text_surface, (10, 10))
+        self._screen.blit(text_surface, (10, 5))
         
         pygame.display.flip()
 
