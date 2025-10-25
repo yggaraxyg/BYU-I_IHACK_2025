@@ -10,6 +10,7 @@ from tkinter import filedialog
 from questionbackend import *
 
 question_list = []
+file_path = "data/questions/easy_mode.csv"
 
 class World:
     def __init__(self):
@@ -265,11 +266,6 @@ def manual_input():
     print("todo")
     pass
 
-def choose_default():
-    # Select between default csv files
-    print("todo")
-    pass
-
 def user_csv():
     # Load user csv file
     root = tkinter.Tk()
@@ -277,12 +273,14 @@ def user_csv():
     file_path = filedialog.askopenfilename(title="Select CSV File", filetypes=[("CSV files", "*.csv")])
     if file_path:
         print(f"Selected file: {file_path}")
-        question_list = questionbox().getFromCSV(file_path)
-        print(question_list)
+        select_csv(file_path)
     else:
         print("No file selected.")
     
     root.destroy()    
+
+def select_csv(file_path):
+    question_list = questionbox().getFromCSV(file_path)
 
 def create_questions_menu():
     theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
@@ -290,11 +288,28 @@ def create_questions_menu():
     
     question_menu = pygame_menu.Menu('Manage ?s', 320, 240, theme=theme)
 
+    csv_submenu = create_csv_menu()
+
     question_menu.add.button("Manual Input", manual_input, font_size=15)
-    question_menu.add.button("Choose Default CSV", choose_default, font_size=15)
+    question_menu.add.button("Choose Default CSV", csv_submenu, font_size=15)
     question_menu.add.button("Load User CSV", user_csv, font_size=15)
 
     return question_menu
+
+def create_csv_menu():
+    theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
+                                     title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
+    
+    csv_menu = pygame_menu.Menu('Select CSV', 320, 240, theme=theme)
+
+    csv_menu.add.button("Easy Mode", select_csv("data/questions/easy_mode.csv"), font_size=15)
+    csv_menu.add.button("English", select_csv("data/questions/english.csv"), font_size=15)
+    csv_menu.add.button("Geography", select_csv("data/questions/geography.csv"), font_size=15)
+    '''csv_menu.add.button("Math", select_csv("data/questions/math.csv"), font_size=15)
+    This one is broken because math.csv uses characters that break the parser'''
+    csv_menu.add.button("Psych", select_csv("data/questions/psych.csv"), font_size=15)
+
+    return csv_menu
 
 if __name__ == "__main__":
 
@@ -306,7 +321,6 @@ if __name__ == "__main__":
     
     menu = pygame_menu.Menu('', 320, 240, theme=custom_theme)
     
-    # Create the questions submenu
     questions_submenu = create_questions_menu()
     
     logo_image = os.path.join('data', 'sprites', 'logo.png')
