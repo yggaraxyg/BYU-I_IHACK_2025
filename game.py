@@ -44,23 +44,19 @@ class World:
         self.collectable_sprites = pygame.sprite.Group()
         self.player = Player(pygame.Vector2(60,60))
         self.turtle = Turtle(pygame.Vector2(20, 20))
-        #self.salamander = Salamander(pygame.Vector2(100,100))
-        self.eyeball = Eyeball(pygame.Vector2(40,200))
-        #self.ogre = Ogre(pygame.Vector2(200,200))
         self.treasure = Treasure(pygame.Vector2(200,40), 100)
         self.heart = Heart(pygame.Vector2(200,80), 5)
         self.player_sprite.add(self.player)
         self.enemy_sprites.add(self.turtle)
-        #self.enemy_sprites.add(self.salamander)
-        self.enemy_sprites.add(self.eyeball)
-        #self.enemy_sprites.add(self.ogre)
         self.collectable_sprites.add(self.treasure)
         self.collectable_sprites.add(self.heart)
         self.last_hit_time = 0
         self.map = pytmx.load_pygame(os.path.join('data', 'maps', 'map1.tmx'))
         self.map_pwidth = self.map.width * 16
         self.map_pheight = self.map.height * 16
+        self.last_spawn = 0
         self.collisionmap()
+        
     def on_event(self, event):
         if event.type == pygame.QUIT:
             self._running = False
@@ -78,6 +74,10 @@ class World:
         
         self.kill()
         self.dt = self.clock.tick(60)
+ 
+        if ((pygame.time.get_ticks()-self.last_spawn)>1000):
+            self.last_spawn = pygame.time.get_ticks()
+            self.spawn_random()
         pass
 
     def on_render(self):
@@ -94,6 +94,9 @@ class World:
         self.player_sprite.draw(self._screen)
         self.enemy_sprites.draw(self._screen)
         self.collectable_sprites.draw(self._screen)
+        font = pygame.font.SysFont("Courier", 12)
+        text_surface = font.render(f"Score: {self.player.score} HP: {self.player.hp}", True, (150, 150, 150))
+        self._screen.blit(text_surface, (10, 10))
         pygame.display.flip()
 
     def on_cleanup(self):
@@ -111,19 +114,21 @@ class World:
         self.on_cleanup()
 
     def player_update(self):
-
         self.player_relative = self.player.pos - self.camera_pos
         self.player_sprite.update(self.player_relative)
         self.collision_check()
 
     
     def enemies_update(self):
-    
         for enemy in self.enemy_sprites:
             enemy.camview(self.player.velocity, self.cameralock)
-          
             enemy.move_towards(self.player_relative)
 
+    def spawn_random(self):
+        etypes = [Salamander, Salamander, Salamander, Eyeball, Eyeball, Eyeball, Ogre]
+        self.spawn = random.choice(etypes)(pygame.Vector2(random.randint(0,768),random.randint(0,1152)))
+        self.enemy_sprites.add(self.spawn)
+            
         
     def camera(self):
         self.cameralock = pygame.Vector2(1,1)
@@ -150,12 +155,14 @@ class World:
         current_time = pygame.time.get_ticks()
         if current_time - self.last_hit_time >= cooldown_time:
             if sprite_collision:
+                #print(type(sprite_collision[0]))
                 self.last_hit_time = current_time
+                if(type(sprite_collision[0])==Ogre):
+                    self.player.hurt(2)
                 self.player.hurt(1)
                 self.player.pos -= self.player.facing * 2
         else:
             self.player.pos -= self.player.facing * 2
-        print(f"Score: {self.player.score} HP: {self.player.hp}")
         for col in self.collectable_sprites:
             sprite_collision = pygame.sprite.spritecollide(col, self.player_sprite, False)
             if sprite_collision:
@@ -475,8 +482,8 @@ if __name__ == "__main__":
 
     
     start_game()
-    '''
-    
+
+    """   
     pygame.init()
     screen = pygame.display.set_mode((320, 240), pygame.RESIZABLE | pygame.SCALED)
 
@@ -504,3 +511,4 @@ if __name__ == "__main__":
     finally:
         pygame.quit()
         sys.exit()
+    #"""
