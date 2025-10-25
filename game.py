@@ -128,13 +128,9 @@ class World:
                 self.player.pos -= self.player.facing * 2
         else:
             self.player.pos -= self.player.facing * 2
-        print("Yam Man")
-        print(self.player.score)
         for col in self.collectable_sprites:
-            print("Ham Man")
             sprite_collision = pygame.sprite.spritecollide(col, self.player_sprite, False)
             if sprite_collision:
-                print("Bam Man")
                 self.player.score+=col.score
                 col.die()
             
