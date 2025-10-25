@@ -37,7 +37,7 @@ class World:
         self.player_facing = pygame.Vector2(0,0)
         self.map = pytmx.load_pygame(os.path.join('data', 'maps', 'map1.tmx'))
         self.map_pwidth = self.map.width * 16
-        self.map_pheight = self.map.width * 16
+        self.map_pheight = self.map.height * 16
 
     def on_event(self, event):
         if event.type == pygame.QUIT:
@@ -93,7 +93,7 @@ class World:
 
         
     def camera(self):
-        self.camera_pos = self.player_pos - 0.5 * pygame.Vector2(self.map_pwidth, self.map_pheight)
+        self.camera_pos = self.player_pos - 0.5 * pygame.Vector2(self.width, self.height)
         if self.camera_pos.x <= 0:
             self.camera_pos.x = 0
         if self.camera_pos.y <= 0:
