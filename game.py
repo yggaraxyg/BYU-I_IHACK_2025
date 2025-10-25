@@ -67,9 +67,9 @@ class World:
 
         self.player_update()
         self.camera()
-        
+      
         self.enemies_update()
-        
+
         self.sprite_update()
         
         self.weapon_update()
@@ -93,8 +93,8 @@ class World:
         self._screen.fill((0,0,0))
         for row in range(self.map.width):
             for column in range (self.map.height):
-                offsetx = -256
-                offsety = -256
+                offsetx = 0
+                offsety = 0
                 self.mapdisplay = pygame.Vector2(row * 16 + offsetx, column * 16 + offsety) - self.camera_pos
                 try:
                     tile = self.map.get_tile_image(row, column, 0)
@@ -206,29 +206,37 @@ class World:
                     else:
                         self.player.hpmod(col.hp)
                 col.die()
+                
                 if((wincondition==1)&&(winquantity<=self.correct)):
                     self.game_over("YOU WIN!")
                 if((wincondition==4)&&(winquantity<=self.answers)):
                     self.game_over("YOU WIN!")
                 if((wincondition==2)&&(winquantity<=self.player.score)):
                     self.game_over("YOU WIN!")
-        self.player.pos.x += self.player.velocity.x
-        for tile_rect in self.collision_tiles:
-            if self.player.rect.colliderect(tile_rect):
-                if self.player_velocity.x > 0:
-                    self.player.rect.right = tile_rect.left
-                if self.player_velocity.x < 0:
-                    self.player.rect.left = tile_rect.right
-                self.player.velocity.x = 0
-        self.player.pos.y += self.player.velocity.y
-        for tile_rect in self.collision_tiles:
-            if self.player.rect.colliderect(tile_rect):
-                if self.player_velocity.y > 0:
-                    self.player.rect.bottom = tile_rect.top
-                if self.player_velocity.y < 0:
-                    self.player.rect.top = tile_rect.bottom
-                self.player.velocity.y = 0
-        
+
+        prev_tile =  pygame.Vector2(self.player.pos.x / 16, self.player.pos.y /16)    
+        next_pos = self.player.pos + self.player.velocity
+        next_tile =  pygame.Vector2(next_pos.x / 16 , next_pos.y /16)           
+        tile = self.map.get_tile_gid(next_tile.x, next_tile.y, 1)
+        self.tile_pos = pygame.Vector2(self.player.pos.x - (prev_tile.x * 16), self.player.pos.y - (prev_tile.y * 16))
+        if tile:
+            if self.player.velocity.x > 0 and next_tile.x != prev_tile.x and next_tile.y == prev_tile.y:
+                self.player.pos.x = (int(next_tile.x) * 16) - 1
+            if self.player.velocity.x < 0 and next_tile.x != prev_tile.x and next_tile.y == prev_tile.y:
+                self.player.pos.x = (int(next_tile.x) * 16) + 16
+            if self.player.velocity.y > 0 and next_tile.y != prev_tile.y and next_tile.x == prev_tile.x:
+                self.player.pos.y = (int(next_tile.y) * 16) - 1
+            if self.player.velocity.y < 0 and next_tile.y != prev_tile.y and next_tile.x == prev_tile.x:
+                self.player.pos.y = (int(next_tile.y) * 16) + 16
+            if self.map.get_tile_gid(next_tile.x, prev_tile.y, 1) == 0:
+                self.player.pos.x = next_pos.x
+            if self.map.get_tile_gid(prev_tile.x, next_tile.y, 1) == 0:
+                self.player.pos.y = next_pos.y
+
+        else:
+            self.player.pos= next_pos
+
+
     def kill(self):
         if self.player.hp <= 0:
             self.player.kill()
@@ -296,6 +304,13 @@ class World:
             self.player.facing.x = 1
             self.last_moved= pygame.time.get_ticks()
         
+        if self.keys[pygame.K_ESCAPE]:
+            pause = pause_menu()
+            try:
+                pause.mainloop(self._screen)
+            except Exception as e:
+                pass
+
         if self.attack_cooldown <= 0:
             if self.keys[pygame.K_UP]:
                 self.attack('up')
@@ -353,7 +368,7 @@ class World:
                     self.collectable_sprites.add(glob)
                     enemy.die()
         
-        pygame.time.set_timer(pygame.USEREVENT + 1, 300)
+        pygame.time.set_timer(pygame.USEREVENT + 1, 150)
 
     def on_event(self, event):
         if event.type == pygame.QUIT:
@@ -382,6 +397,8 @@ class World:
         question_box = questionbox()
         question_box.questionlist = question_list
         question_set = question_box.getQuestion()
+
+        self.current_question_set = question_set
         
         question_text = question_set[0]
         answer1 = question_set[1]
@@ -411,15 +428,36 @@ class World:
         return self.question_result
 
     def answer_question(self, selected_answer, correct_answer, menu):
+        question_set = self.current_question_set
+        correct_answer_text = question_set[correct_answer + 1]
         if selected_answer == correct_answer:
             print("correct")
+            self.question_feedback(True)
             self.question_result = True
         else:
             print("wrong")
+            self.question_feedback(False, correct_answer_text)
             self.question_result = False
             
-        menu.disable()
-        menu._close()
+        exit_menu(menu)
+    
+    def question_feedback(self, correct, correct_answer=None):
+        feedback_theme = pygame_menu.Theme(
+            background_color=(50, 50, 50, 200),
+            title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE
+        )
+
+        feedback_menu = pygame_menu.Menu('', 280, 180, theme=feedback_theme)
+        
+        if correct:
+            feedback_menu.add.label("Correct!", font_size=18, font_color=(0, 255, 0), align=pygame_menu.locals.ALIGN_CENTER)
+        else:
+            feedback_menu.add.label(f"Incorrect. The answer was {correct_answer}.", font_size=13, font_color=(255, 0, 0), align=pygame_menu.locals.ALIGN_CENTER)
+        
+        feedback_menu.add.vertical_margin(10)
+        feedback_menu.add.button("Continue", lambda: exit_menu(feedback_menu), font_size=15)
+        
+        feedback_menu.mainloop(self._screen)
 
 
 class GameEntity(pygame.sprite.Sprite):
@@ -599,8 +637,7 @@ def create_manual_menu():
                                      title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
     
     manual_menu = pygame_menu.Menu('Manual Input', 320, 240, theme=theme)
-    global question_list
-    question_list = []  # Clear existing questions
+    
     question_input = manual_menu.add.text_input("Question: ", default="", font_size=11)
     answer_input = manual_menu.add.text_input("Correct Answer: ", default="", font_size=11)
     
@@ -613,22 +650,16 @@ def create_manual_menu():
         wrong3_text = wrong3_input.get_value()
         
         if question_text and answer_text and wrong1_text and wrong2_text and wrong3_text:
-            question_box = questionbox()
-            question_box.addQuestion(question_text, answer_text, wrong1_text, wrong2_text, wrong3_text)
-            question_list.append(question_box.questionlist)
+            question_list.append([question_text, answer_text, wrong1_text, wrong2_text, wrong3_text])
             print(f"Added question: {question_text} -> {answer_text} with wrong answers: {wrong1_text}, {wrong2_text}, {wrong3_text}")
-            # Clear inputs
             question_input.set_value("")
             answer_input.set_value("")
             wrong1_input.set_value("")
             wrong2_input.set_value("")
             wrong3_input.set_value("")
         elif question_text and answer_text:
-            question_box = questionbox()
-            question_box.addQuestion(question_text, answer_text)
-            question_list.append(question_box.questionlist)
+            question_list.append([question_text, answer_text])
             print(f"Added question: {question_text} -> {answer_text}")
-            # Clear inputs
             question_input.set_value("")
             answer_input.set_value("")
             wrong1_input.set_value("")
@@ -638,19 +669,50 @@ def create_manual_menu():
             print("Please enter both question and answer")
     
     manual_menu.add.button("Add Question", handle_manual_input, font_size=12)
-    manual_menu.add.label("Optional:", font_size=10)
     wrong1_input = manual_menu.add.text_input("Wrong Answer 1: ", default="", font_size=11)
     wrong2_input = manual_menu.add.text_input("Wrong Answer 2: ", default="", font_size=11)
     wrong3_input = manual_menu.add.text_input("Wrong Answer 3: ", default="", font_size=11)
+    manual_menu.add.button("Save File", save_manual_questions, font_size=12)
 
     return manual_menu
+
+def save_manual_questions():
+    global question_list
+    root = tkinter.Tk()
+    root.withdraw()
+    file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
+    if file_path:
+        from csv_unparser import save_to_csv
+        save_to_csv(file_path, question_list)
+        print(f"Saved {len(question_list)} questions to {file_path}")
+    else:
+        print("Save operation cancelled.")
+    root.destroy()
+
+def pause_menu():
+    theme = pygame_menu.Theme(background_color=(50, 50, 50, 200),
+                                     title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
+    
+    manual_menu = create_manual_menu()
+    
+    pause_menu = pygame_menu.Menu('', 320, 240, theme=theme)
+    pause_menu.add.label("Paused", font_size=20, font_color=(255, 255, 255))
+    pause_menu.add.vertical_margin(10)
+    pause_menu.add.button("Resume", lambda: exit_menu(pause_menu), font_size=15)
+    pause_menu.add.button("Add Questions", manual_menu, font_size=15)
+    pause_menu.add.button("Quit", pygame_menu.events.EXIT, font_size=15)
+
+    return pause_menu
+
+def exit_menu(menu):
+    menu.disable()
+    menu._close()
 
 def win_conditions_menu():
     theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
                                      title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
     
     win_condition = pygame_menu.Menu('Win Condtion:', 320, 240, theme=theme)
-
     def handle_manual_input():
         try:
            set_winquantity(box.get_value())
