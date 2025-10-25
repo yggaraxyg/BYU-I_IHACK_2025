@@ -10,7 +10,7 @@ from tkinter import filedialog
 from questionbackend import *
 
 question_list = []
-file_path = "data/questions/easy_mode.csv"
+file_path = "data/questions/easy_mode.csv" # Default CSV file path
 
 class World:
     def __init__(self):
@@ -175,7 +175,7 @@ class GameEntity(pygame.sprite.Sprite):
         if (self.hp<=0):
             self.die()
 
-    def heal(num):
+    def heal(self, num):
         self.hpmod(num)
 
     def hurt(self,num):
@@ -246,11 +246,6 @@ def start_game():
     world = World()
     world.on_execute()
 
-def manual_input():
-    # Manual input function for custom questions
-    print("todo")
-    pass
-
 def user_csv():
     # Load user csv file
     root = tkinter.Tk()
@@ -265,7 +260,14 @@ def user_csv():
     root.destroy()    
 
 def select_csv(file_path):
-    question_list = questionbox().getFromCSV(file_path)
+    global question_list
+    question_list = []  # Clear existing questions
+    question_box = questionbox()
+    question_box.getFromCSV(file_path)
+    
+    question_list.extend(question_box.questionlist)
+    print(f"Loaded {len(question_box.questionlist)} questions from {file_path}")
+    print(f"Total questions in list: {len(question_list)}")
 
 def create_questions_menu():
     theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
@@ -274,10 +276,12 @@ def create_questions_menu():
     question_menu = pygame_menu.Menu('Manage ?s', 320, 240, theme=theme)
 
     csv_submenu = create_csv_menu()
+    manual_submenu = create_manual_menu()
 
-    question_menu.add.button("Manual Input", manual_input, font_size=15)
+    question_menu.add.button("Manual Input", manual_submenu, font_size=15)
     question_menu.add.button("Choose Default CSV", csv_submenu, font_size=15)
     question_menu.add.button("Load User CSV", user_csv, font_size=15)
+    question_menu.add.button("test csv", lambda: print(question_list), font_size=15)
 
     return question_menu
 
@@ -287,14 +291,64 @@ def create_csv_menu():
     
     csv_menu = pygame_menu.Menu('Select CSV', 320, 240, theme=theme)
 
-    csv_menu.add.button("Easy Mode", select_csv("data/questions/easy_mode.csv"), font_size=15)
-    csv_menu.add.button("English", select_csv("data/questions/english.csv"), font_size=15)
-    csv_menu.add.button("Geography", select_csv("data/questions/geography.csv"), font_size=15)
-    '''csv_menu.add.button("Math", select_csv("data/questions/math.csv"), font_size=15)
+    csv_menu.add.button("Easy Mode", lambda: select_csv("data/questions/easy_mode.csv"), font_size=15)
+    csv_menu.add.button("English", lambda: select_csv("data/questions/english.csv"), font_size=15)
+    csv_menu.add.button("Geography", lambda: select_csv("data/questions/geography.csv"), font_size=15)
+    '''csv_menu.add.button("Math", lambda: select_csv("data/questions/math.csv"), font_size=15)
     This one is broken because math.csv uses characters that break the parser'''
-    csv_menu.add.button("Psych", select_csv("data/questions/psych.csv"), font_size=15)
+    csv_menu.add.button("Psych", lambda: select_csv("data/questions/psych.csv"), font_size=15)
 
     return csv_menu
+
+def create_manual_menu():
+    theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
+                                     title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
+    
+    manual_menu = pygame_menu.Menu('Manual Input', 320, 240, theme=theme)
+
+    question_list = []  # Clear existing questions
+    question_input = manual_menu.add.text_input("Question: ", default="", font_size=11)
+    answer_input = manual_menu.add.text_input("Correct Answer: ", default="", font_size=11)
+    
+    def handle_manual_input():
+        question_text = question_input.get_value()
+        answer_text = answer_input.get_value()
+        wrong1_text = wrong1_input.get_value()
+        wrong2_text = wrong2_input.get_value()
+        wrong3_text = wrong3_input.get_value()
+        
+        if question_text and answer_text and wrong1_text and wrong2_text and wrong3_text:
+            question_box = questionbox()
+            question_box.addQuestion(question_text, answer_text, wrong1_text, wrong2_text, wrong3_text)
+            question_list.append(question_box.questionlist)
+            print(f"Added question: {question_text} -> {answer_text} with wrong answers: {wrong1_text}, {wrong2_text}, {wrong3_text}")
+            # Clear inputs
+            question_input.set_value("")
+            answer_input.set_value("")
+            wrong1_input.set_value("")
+            wrong2_input.set_value("")
+            wrong3_input.set_value("")
+        elif question_text and answer_text:
+            question_box = questionbox()
+            question_box.addQuestion(question_text, answer_text)
+            question_list.append(question_box.questionlist)
+            print(f"Added question: {question_text} -> {answer_text}")
+            # Clear inputs
+            question_input.set_value("")
+            answer_input.set_value("")
+            wrong1_input.set_value("")
+            wrong2_input.set_value("")
+            wrong3_input.set_value("")
+        else:
+            print("Please enter both question and answer")
+    
+    manual_menu.add.button("Add Question", handle_manual_input, font_size=12)
+    manual_menu.add.label("Optional:", font_size=10)
+    wrong1_input = manual_menu.add.text_input("Wrong Answer 1: ", default="", font_size=11)
+    wrong2_input = manual_menu.add.text_input("Wrong Answer 2: ", default="", font_size=11)
+    wrong3_input = manual_menu.add.text_input("Wrong Answer 3: ", default="", font_size=11)
+
+    return manual_menu
 
 if __name__ == "__main__":
     pygame.init()
