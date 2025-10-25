@@ -20,11 +20,13 @@ pip install pathfinding
 - H - receive help (on cooldown)
 
 **Interface:**
-Escape - pause game <br />
-Arrow keys - select option in menu <br />
-Enter - choose selected option
+- Escape - pause game
+- Arrow keys - select option in menu
+- Enter - choose selected option
 
 ## Credits / Thanks
-BYU-I for holding the hackathon <br />
-Developers - Alice Rygg, Elliott VanOrman, Nathan Murray, Tristan Zatylny <br />
+BYU-I for holding the hackathon
+
+Developers - Alice Rygg, Elliott VanOrman, Nathan Murray, Tristan Zatylny
+
 All of the authors of libraries used
