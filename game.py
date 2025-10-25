@@ -213,11 +213,11 @@ class World:
                 starttime+=(pygame.time.get_ticks()-delay)
                 col.die()
                 
-                if((wincondition==1)&&(winquantity<=self.correct)):
+                if((wincondition==1) and (winquantity<=self.correct)):
                     self.game_over("YOU WIN!")
-                if((wincondition==4)&&(winquantity<=self.answers)):
+                if((wincondition==4) and (winquantity<=self.answers)):
                     self.game_over("YOU WIN!")
-                if((wincondition==2)&&(winquantity<=self.player.score)):
+                if((wincondition==2) and (winquantity<=self.player.score)):
                     self.game_over("YOU WIN!")
 
         prev_tile =  pygame.Vector2(self.player.pos.x / 16, self.player.pos.y /16)    
@@ -613,7 +613,7 @@ def create_questions_menu():
     theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
                                      title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
     
-    question_menu = pygame_menu.Menu('Manage ?s', 320, 240, theme=theme)
+    question_menu = pygame_menu.Menu('Options', 320, 240, theme=theme)
 
     csv_submenu = create_csv_menu()
     manual_submenu = create_manual_menu()
@@ -622,7 +622,6 @@ def create_questions_menu():
     question_menu.add.button("Manual Input", manual_submenu, font_size=15)
     question_menu.add.button("Choose Default CSV", csv_submenu, font_size=15)
     question_menu.add.button("Load User CSV", user_csv, font_size=15)
-    question_menu.add.button("test csv", lambda: print(question_list), font_size=15)
     question_menu.add.button("Change Win Condition", wincondition,font_size=15)
     return question_menu
 
