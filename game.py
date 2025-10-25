@@ -176,6 +176,39 @@ class World:
     def kill(self):
         if self.player.hp <= 0:
             self.player.kill()
+            self._running = False
+            self.game_over()
+
+    def game_over(self):
+        print("Game Over")
+        theme = pygame_menu.Theme(background_color=(50, 50, 50, 200),
+                                 title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
+        
+        game_over_menu = pygame_menu.Menu('', 320, 240, theme=theme)
+        game_over_menu.add.label("GAME OVER", font_size=20, font_color=(255, 0, 0))
+        game_over_menu.add.vertical_margin(10)
+        game_over_menu.add.button("Restart", self.restart_game, font_size=15)
+        game_over_menu.add.button("Main Menu", self.return_to_main_menu, font_size=15)
+        game_over_menu.add.button("Quit", pygame_menu.events.EXIT, font_size=15)
+
+        try:
+            game_over_menu.mainloop(self._screen)
+        except Exception as e:
+            pass
+
+    def restart_game(self):
+        start_game()
+
+    def return_to_main_menu(self):
+        menu = main_menu()
+
+        try:
+            menu.mainloop(screen)
+        except Exception as e:
+            pass
+        finally:
+            pygame.quit()
+            sys.exit()
 
     def get_input(self):
         self.keys = pygame.key.get_pressed()
@@ -462,19 +495,11 @@ def create_manual_menu():
 
     return manual_menu
 
-if __name__ == "__main__":
-
-    '''
-    start_game()
-    '''
-    
-    pygame.init()
-    screen = pygame.display.set_mode((320, 240), pygame.RESIZABLE | pygame.SCALED)
-
-    custom_theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
+def main_menu():
+    theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
                                      title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
     
-    menu = pygame_menu.Menu('', 320, 240, theme=custom_theme)
+    menu = pygame_menu.Menu('', 320, 240, theme=theme)
     
     questions_submenu = create_questions_menu()
     
@@ -488,6 +513,19 @@ if __name__ == "__main__":
     menu.add.vertical_margin(10)
     menu.add.banner(pygame_menu.BaseImage(image_path=questions_button_image), questions_submenu)
 
+    return menu
+
+if __name__ == "__main__":
+
+    '''
+    start_game()
+    '''
+    
+    pygame.init()
+    screen = pygame.display.set_mode((320, 240), pygame.RESIZABLE | pygame.SCALED)
+
+    menu = main_menu()
+
     try:
         menu.mainloop(screen)
     except Exception as e:
@@ -495,3 +533,4 @@ if __name__ == "__main__":
     finally:
         pygame.quit()
         sys.exit()
+    #'''
