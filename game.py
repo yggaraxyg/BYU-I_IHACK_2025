@@ -34,6 +34,8 @@ class World:
         self.player = Player(pygame.Vector2(60,60))
         self.turtle = Turtle(pygame.Vector2(20, 20))
         self.salamander = Salamander(pygame.Vector2(100,100))
+        self.eyeball = Eyeball(pygame.Vector2(300,300))
+        self.ogre = Ogre(pygame.Vector2(200,200))
         self.player_sprite.add(self.player)
         self.enemy_sprites.add(self.turtle)
         self.enemy_sprites.add(self.salamander)
@@ -86,7 +88,7 @@ class World:
         self.on_cleanup()
 
     def player_update(self):
-        self.player.pos = self.player.pos + self.velocity
+        self.player.pos = self.player.pos + self.player.velocity
         self.player_sprite.update(self.player.pos - self.camera_pos)
         self.collision_check()
 
@@ -97,7 +99,7 @@ class World:
 
         
     def camera(self):
-        self.camera_pos = self.player_pos - 0.5 * pygame.Vector2(self.width, self.height)
+        self.camera_pos = self.player.pos - 0.5 * pygame.Vector2(self.width, self.height)
         if self.camera_pos.x <= 0:
             self.camera_pos.x = 0
         if self.camera_pos.y <= 0:
@@ -241,6 +243,14 @@ class Heart(GameEntity):
 class Salamander(GameEntity):
     def __init__(self, pos):
         super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'salamander.png')), 20, 20, 40 , 0.25)        
+
+class Eyeball(GameEntity):
+    def __init__(self, pos):
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'florb.png')), 50, 50, 40 , 0)
+
+class Ogre(GameEntity):
+    def __init__(self, pos):
+        super().__init__(pos,pygame.image.load(os.path.join('data', 'sprites', 'ogre.png')), 400, 400, 1000 , 0.05)
         
 def start_game():
     world = World()
@@ -351,9 +361,13 @@ def create_manual_menu():
     return manual_menu
 
 if __name__ == "__main__":
+    '''
+    start_game()
+    '''
+    
     pygame.init()
     screen = pygame.display.set_mode((320, 240), pygame.RESIZABLE | pygame.SCALED)
-    
+
     custom_theme = pygame_menu.Theme(background_color=(0, 0, 0, 0),
                                      title_bar_style=pygame_menu.widgets.MENUBAR_STYLE_NONE)
     
